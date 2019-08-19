@@ -1,0 +1,33 @@
+[package]
+name = "mesher"
+version = "0.1.0"
+authors = ["Nic Hartley <nxh9052@rit.edu>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.98", features = ["derive"] }
+bincode = "1.1.4"
+sodiumoxide = "0.2.2"
+
+[[bin]]
+name = "c2cli"
+required-features = []
+
+[[bin]]
+name = "c2webui"
+required-features = ["build-c2webui"]
+
+[[bin]]
+name = "demo-rat"
+required-features = ["build-demo-rat"]
+
+[features]
+default = []
+
+handling = []
+c-api = []
+
+build-c2cli = []
+build-c2webui = []
+build-demo-rat = ["handling"]
+build-all = ["build-c2cli", "build-c2webui", "build-demo-rat"]
