@@ -31,7 +31,7 @@ pub fn pack_commands(
     let mut elems: Vec<Vec<u8>> = Vec::new();
     for cmd in cmds {
         let serd = bincode::serialize(&cmd.0).map_err(Error::SerializeFail)?;
-        let nonce = crypto::gen_nonce();
+        let nonce = crypto::Nonce([0; 24]);
         let sealed = crypto::seal(&serd, &nonce, cmd.1, sender_skey);
         let elem = nonce.0.iter().cloned().chain(sealed.into_iter()).collect();
         elems.push(elem);
@@ -58,7 +58,7 @@ pub fn unpack_commands(
     receiver_skey: &crypto::SecretKey,
     bytes: &[u8],
 ) -> Result<Vec<Command>> {
-    let ded = bincode::deserialize::<Vec<Vec<u8>>>(&bytes)
+    let ded: Vec<Vec<u8>> = bincode::deserialize(&bytes)
             .map_err(Error::SerializeFail)?;
     Ok(ded.into_iter().filter_map(|el| open_elem(el, sender_pkey, receiver_skey)).collect())
 }

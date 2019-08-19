@@ -8,10 +8,11 @@ fn main() {
 
     let mut bytes = Vec::new();
     std::io::stdin().read_to_end(&mut bytes).expect("Failed to read");
+
     mesher::handle::packet(&c2_pkey, &rat_skey, &bytes, |custom| {
         println!("Custom data: {:?}", custom);
     }, |dest, data| {
-        println!("Would send {:?} to {}", data, dest);
+        println!("Would send {}-byte payload to {}", data.len(), dest);
         true
     }).expect("something went wrong");
 }
