@@ -27,7 +27,12 @@ default = []
 handling = []
 c-api = []
 
-build-c2cli = []
-build-c2webui = []
+build-c2-cli = []
+build-c2-webui = []
+build-c2s = ["build-c2-cli", "build-c2-webui"]
+
 build-demo-rat = ["handling"]
-build-all = ["build-c2cli", "build-c2webui", "build-demo-rat"]
+build-demo-fwd = ["handling"]
+build-demos = ["build-demo-rat", "build-demo-fwd"]
+
+build-all = ["build-c2s", "build-demos"]
