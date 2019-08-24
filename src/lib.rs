@@ -3,7 +3,10 @@ extern crate bincode;
 extern crate serde;
 
 extern crate sodiumoxide;
-use sodiumoxide::crypto::box_ as crypto;
+use sodiumoxide::crypto::box_ as nacl;
+
+mod crypto;
+use crypto::*;
 
 // TODO: C api
 
@@ -15,7 +18,7 @@ pub enum Command {
 
 #[derive(Debug)]
 pub enum Error {
-    SerializeFail(bincode::Error),
+    BincodeFail(bincode::Error),
     CryptoFail,
     #[cfg(feature = "handling")]
     MessageSendFailed,
@@ -23,44 +26,29 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn pack_commands(
-    sender_skey: &crypto::SecretKey,
-    cmds: &[(Command, &crypto::PublicKey)],
+    sender_skey: &nacl::SecretKey,
+    cmds: &[(Command, &nacl::PublicKey)],
 ) -> Result<Vec<u8>> {
     sodiumoxide::init().map_err(|_| Error::CryptoFail)?;
 
     let mut elems: Vec<Vec<u8>> = Vec::new();
     for cmd in cmds {
-        let serd = bincode::serialize(&cmd.0).map_err(Error::SerializeFail)?;
-        let nonce = crypto::Nonce([0; 24]);
-        let sealed = crypto::seal(&serd, &nonce, cmd.1, sender_skey);
-        let elem = nonce.0.iter().cloned().chain(sealed.into_iter()).collect();
-        elems.push(elem);
+        elems.push(ser_encrypt(&cmd.0, sender_skey, cmd.1)?);
     }
-    bincode::serialize(&elems).map_err(Error::SerializeFail)
-}
-
-fn open_elem(
-    elem: Vec<u8>,
-    pkey: &crypto::PublicKey,
-    skey: &crypto::SecretKey,
-) -> Option<Command> {
-    if elem.len() < crypto::NONCEBYTES {
-        return None;
-    }
-    let (nonce, elem) = elem.split_at(crypto::NONCEBYTES);
-    let nonce = crypto::Nonce::from_slice(nonce)?;
-    let opened = crypto::open(elem, &nonce, pkey, skey).ok()?;
-    bincode::deserialize(&opened).ok()
+    bincode::serialize(&elems).map_err(Error::BincodeFail)
 }
 
 pub fn unpack_commands(
-    sender_pkey: &crypto::PublicKey,
-    receiver_skey: &crypto::SecretKey,
+    sender_pkey: &nacl::PublicKey,
+    recver_skey: &nacl::SecretKey,
     bytes: &[u8],
 ) -> Result<Vec<Command>> {
-    let ded: Vec<Vec<u8>> = bincode::deserialize(&bytes)
-            .map_err(Error::SerializeFail)?;
-    Ok(ded.into_iter().filter_map(|el| open_elem(el, sender_pkey, receiver_skey)).collect())
+    let ded: Vec<Vec<u8>> =
+        bincode::deserialize(&bytes).map_err(Error::BincodeFail)?;
+    Ok(ded
+        .into_iter()
+        .filter_map(|el| de_decrypt(&el, sender_pkey, recver_skey).ok())
+        .collect())
 }
 
 #[cfg(feature = "handling")]

@@ -1,4 +1,4 @@
-use crate::{unpack_commands, Command};
+use crate::{unpack_commands, Command, ser_encrypt};
 
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as crypto;
