@@ -5,7 +5,7 @@ extern crate serde;
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as crypto;
 
-use crate::{Result, Error};
+use crate::{Error, Result};
 
 pub fn encrypt(
     clear: &[u8],
@@ -14,7 +14,12 @@ pub fn encrypt(
 ) -> Result<Vec<u8>> {
     let nonce = crypto::gen_nonce();
     let sealed = crypto::seal(clear, &nonce, recver_pkey, sender_skey);
-    Ok(nonce.0.to_vec().into_iter().chain(sealed.into_iter()).collect())
+    Ok(nonce
+        .0
+        .to_vec()
+        .into_iter()
+        .chain(sealed.into_iter())
+        .collect())
 }
 
 pub fn ser_encrypt<T: serde::Serialize>(

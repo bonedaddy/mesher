@@ -10,22 +10,34 @@ use crypto::*;
 
 // TODO: C api
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub enum Command {
-    Forward(String),
-    Custom(Vec<u8>),
-}
-
 #[derive(Debug)]
 pub enum Error {
     BincodeFail(bincode::Error),
     CryptoFail,
     #[cfg(feature = "handling")]
-    MessageSendFailed,
+    SendFailed(String),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub fn pack_commands(
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub enum Command {
+    Shell(String, nacl::PublicKey),
+    ShellOutput(Vec<u8>),
+    Forward(String),
+    Print(String), // for testing purposes
+}
+
+
+
+pub enum Permission {
+    ForwardText,
+}
+
+pub struct Packet {
+
+}
+
+pub fn serialize_packet(
     sender_skey: &nacl::SecretKey,
     cmds: &[(Command, &nacl::PublicKey)],
 ) -> Result<Vec<u8>> {
@@ -39,9 +51,9 @@ pub fn pack_commands(
 }
 
 pub fn unpack_commands(
+    bytes: &[u8],
     sender_pkey: &nacl::PublicKey,
     recver_skey: &nacl::SecretKey,
-    bytes: &[u8],
 ) -> Result<Vec<Command>> {
     let ded: Vec<Vec<u8>> =
         bincode::deserialize(&bytes).map_err(Error::BincodeFail)?;
