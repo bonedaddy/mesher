@@ -17,7 +17,7 @@ fn main() {
     )
     .expect("package");
 
-    std::io::stdout()
+    std::io::stderr()
         .write_all(&packet)
         .expect("Failed to write to stdout");
 }
