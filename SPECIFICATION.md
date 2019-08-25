@@ -16,6 +16,10 @@ Other words not defined below are used according to their colloquial English mea
 -   An **adversary** is the person or group of people who oppose the operation.
 -   An **implant** is software controlled by C2, running on a non-C2 computer.
     Several types of mesher implants are defined in the _Implant Types_ section.
+-   A **node** is a computer on which an implant is running.
+    This distinction is made because the implant just tells the computer what to do.
+    The node is what actually does things.
+    However, this control can be disrupted, so it's possible for the implant to issue orders that the node doesn't obey. 
 -   A **target implant** is an implant important to completing the operation.
 -   A **compromised** computer is one under the control of the adversary.
 -   A **zone** is a conceptual collection of computers.
@@ -40,5 +44,7 @@ Other words not defined below are used according to their colloquial English mea
 
 A mesher network is composed of multiple nodes.
 Each node is identical with respect to communication, but may differ in how they handle received messages.
+Nodes are expected to be distributed roughly evenly among the four zones, though networks may have much fewer in the red zone, depending on the operation's goals. 
+
 
  [RFC2119]: https://www.ietf.org/rfc/rfc2119.txt
