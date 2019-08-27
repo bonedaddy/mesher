@@ -51,7 +51,7 @@ The tradeoff is that, unlike onion routing, a persistent 'tunnel' can't easily b
 mesher provides some tooling to automate the process, but 
 To some extent, this is intentional, because it makes anonymity easier to uphold if there's no single, consistent path to follow.
 
-
+TODO: single-way, circuits, etc.
 
 ## Communication protocol
 
@@ -59,12 +59,17 @@ The communication protocol is defined around packets.
 Each packet can be sent through virtually any transport layer, from plain TCP to steganographically encoded images, as long as it has enough bandwidth.
 The packets themselves are designed to expose as little information as possible both to any passive eavesdroppers, as well as any compromised nodes.
 
-Packets can be broadly defined as a group of commands
+Packets can be broadly defined as a group of commands, with meta-information in a header.
+This specification defines no maximum packet size, because of a few of the predefined payloads.
+However, it is also explicitly spec-compliant to set a limit for a given piece of software.
+There _is no_ way to negotiate this limit, as that would require a connection between the source and implant.
+mesher provides a setting to error out on packets greater than a given size, but the user is expected to know the maximum packet size their nodes support.
+
+The format is designed to be easily read from a stream, with minimal memory overhead, occasionally at the expense of performance, as well as taking up minimal bandwidth.
+Using less memory on the reader's side allows implants to consume fewer resources and 
 
 ### Header
 
 ### Commands
-
-
 
  [RFC2119]: https://www.ietf.org/rfc/rfc2119.txt
