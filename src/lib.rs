@@ -5,8 +5,10 @@ extern crate serde;
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as nacl;
 
+#[macro_use]
+extern crate bitflags;
+
 mod crypto;
-use crypto::*;
 
 // TODO: C api
 
@@ -27,14 +29,34 @@ pub enum Command {
     Print(String), // for testing purposes
 }
 
+bitflags! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    pub struct Allowance: u8 {
+        const FWD   = 0x01;
+        const DATA  = 0x02;
+        const RUN   = 0x04;
+        // TODO: More perms for relevant commands
+    }
+}
 
-
-pub enum Permission {
-    ForwardText,
+pub struct Permission {
+    what: Allowance,
+    who: crypto::PublicKey,
 }
 
 pub struct Packet {
+    perms: Vec<(&nacl::PublicKey, Permission)>,
+    commands: Vec<(&nacl::PublicKey, Command)>,
+}
 
+impl Packet {
+    pub fn deserialize(from: Vec<u8>) -> Vec<Command> {
+
+    }
+
+    pub fn serialize(self, sender_skey: &nacl::SecretKey) -> Vec<u8> {
+        
+    }
 }
 
 pub fn serialize_packet(

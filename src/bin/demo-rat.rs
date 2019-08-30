@@ -1,11 +1,11 @@
-use sodiumoxide::crypto::box_ as crypto;
+use sodiumoxide::crypto::box_ as nacl;
 
 use std::io::Read as _;
 
 fn main() {
-    let (c2_pkey, _) = crypto::keypair_from_seed(&crypto::Seed([0; 32]));
+    let (c2_pkey, _) = nacl::keypair_from_seed(&nacl::Seed([0; 32]));
     let num = std::env::args().collect::<Vec<_>>()[1].parse().unwrap();
-    let (_, rat_skey) = crypto::keypair_from_seed(&crypto::Seed([num; 32]));
+    let (_, rat_skey) = nacl::keypair_from_seed(&nacl::Seed([num; 32]));
 
     println!("R{} listening", num);
 
