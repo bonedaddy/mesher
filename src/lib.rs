@@ -3,7 +3,6 @@ extern crate bincode;
 extern crate serde;
 
 extern crate sodiumoxide;
-use sodiumoxide::crypto::box_ as nacl;
 
 #[macro_use]
 extern crate bitflags;
@@ -15,7 +14,7 @@ mod crypto;
 #[derive(Debug)]
 pub enum Error {
     BincodeFail(bincode::Error),
-    CryptoFail,
+    CryptoFail(crypto::Error),
     #[cfg(feature = "handling")]
     SendFailed(String),
 }
@@ -23,66 +22,122 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum Command {
-    Shell(String, nacl::PublicKey),
+    Shell(String, crypto::PublicKey),
     ShellOutput(Vec<u8>),
     Forward(String),
     Print(String), // for testing purposes
 }
 
 bitflags! {
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(serde::Serialize, serde::Deserialize)]
     pub struct Allowance: u8 {
-        const FWD   = 0x01;
-        const DATA  = 0x02;
-        const RUN   = 0x04;
+        const FORWARD   = 0x01;
+        const DATA      = 0x02;
+        const RUN       = 0x04;
+        const PERM      = 0x80;
         // TODO: More perms for relevant commands
     }
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Permission {
-    what: Allowance,
-    who: crypto::PublicKey,
+    pub what: Allowance,
+    pub who: crypto::PublicKey,
 }
 
-pub struct Packet {
-    perms: Vec<(&nacl::PublicKey, Permission)>,
-    commands: Vec<(&nacl::PublicKey, Command)>,
+impl Permission {
+    fn allows(&self, what: &Command) -> bool {
+        match what {
+            Command::Shell(_, _) => self.what.contains(Allowance::RUN),
+            Command::ShellOutput(_) => self.what.contains(Allowance::DATA),
+            Command::Forward(_) => self.what.contains(Allowance::FORWARD),
+            Command::Print(_) => self.what.contains(Allowance::DATA),
+        }
+    }
+
+    fn allows_grant(&self) -> bool {
+        self.what.contains(Allowance::PERM)
+    }
 }
+
+fn enc_vec<T: serde::Serialize>(
+    clears: Vec<(&crypto::PublicKey, T)>,
+    sender_skey: &crypto::SecretKey,
+) -> Result<Vec<Vec<u8>>> {
+    let mut out = Vec::with_capacity(clears.len());
+    for (recver_pkey, item) in clears.into_iter() {
+        let crypted = crypto::ser_encrypt(&item, sender_skey, recver_pkey)?;
+        out.push(crypted);
+    }
+    Ok(out)
+}
+
+// header rows, body rows
+type SerdBlob = (Vec<Vec<u8>>, Vec<Vec<u8>>);
+
+pub struct Packet;
 
 impl Packet {
-    pub fn deserialize(from: Vec<u8>) -> Vec<Command> {
+    pub fn serialize(
+        sender_skey: &crypto::SecretKey,
+        perms: Vec<(&crypto::PublicKey, Permission)>,
+        commands: Vec<(&crypto::PublicKey, Command)>,
+    ) -> Result<Vec<u8>> {
+        crypto::init().map_err(Error::CryptoFail)?;
 
+        println!("Encrypting components");
+        let header_rows = enc_vec(perms, sender_skey)?;
+        let body_rows = enc_vec(commands, sender_skey)?;
+        println!("Serializing tuple ({}, {})", header_rows.len(), body_rows.len());
+        bincode::serialize::<SerdBlob>(&(header_rows, body_rows)).map_err(Error::BincodeFail)
     }
 
-    pub fn serialize(self, sender_skey: &nacl::SecretKey) -> Vec<u8> {
-        
+    pub fn deserialize(
+        from: &[u8],
+        sender_pkey: &crypto::PublicKey,
+        recver_skey: &crypto::SecretKey
+    ) -> Result<Vec<Command>> {
+        crypto::init().map_err(Error::CryptoFail)?;
+
+        let (header_rows, footer_rows): SerdBlob = bincode::deserialize(from).map_err(Error::BincodeFail)?;
+
+        let mut perms = vec![Permission {
+            what: Allowance::all(),
+            who: sender_pkey.clone(),
+        }];
+        for row in header_rows {
+            let decd = perms.iter().find_map(|perm| {
+                if !perm.allows_grant() {
+                    return None;
+                }
+                crypto::de_decrypt(&row, &perm.who, recver_skey).ok()
+            });
+            let decd = match decd {
+                Some(decd) => decd,
+                None => continue,
+            };
+            perms.push(decd);
+        }
+
+        let mut res = vec![];
+        for row in footer_rows {
+            let decd = perms.iter().find_map(|perm| {
+                let decd = crypto::de_decrypt(&row, &perm.who, recver_skey).ok()?;
+                if !perm.allows(&decd) {
+                    None
+                } else {
+                    Some(decd)
+                }
+            });
+            let decd = match decd {
+                Some(decd) => decd,
+                None => continue,
+            };
+            res.push(decd);
+        }
+
+        Ok(res)
     }
-}
-
-pub fn serialize_packet(
-    sender_skey: &nacl::SecretKey,
-    cmds: &[(Command, &nacl::PublicKey)],
-) -> Result<Vec<u8>> {
-    sodiumoxide::init().map_err(|_| Error::CryptoFail)?;
-
-    let mut elems: Vec<Vec<u8>> = Vec::new();
-    for cmd in cmds {
-        elems.push(ser_encrypt(&cmd.0, sender_skey, cmd.1)?);
-    }
-    bincode::serialize(&elems).map_err(Error::BincodeFail)
-}
-
-pub fn unpack_commands(
-    bytes: &[u8],
-    sender_pkey: &nacl::PublicKey,
-    recver_skey: &nacl::SecretKey,
-) -> Result<Vec<Command>> {
-    let ded: Vec<Vec<u8>> =
-        bincode::deserialize(&bytes).map_err(Error::BincodeFail)?;
-    Ok(ded
-        .into_iter()
-        .filter_map(|el| de_decrypt(&el, sender_pkey, recver_skey).ok())
-        .collect())
 }
 
 #[cfg(feature = "handling")]

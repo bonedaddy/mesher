@@ -8,10 +8,11 @@ edition = "2018"
 serde = { version = "1.0.98", features = ["derive"] }
 bincode = "1.1.4"
 sodiumoxide = "0.2.2"
+bitflags = "1.1.0"
 
 [[bin]]
 name = "c2cli"
-required-features = []
+required-features = ["build-c2cli"]
 
 [[bin]]
 name = "c2webui"
@@ -21,15 +22,19 @@ required-features = ["build-c2webui"]
 name = "demo-rat"
 required-features = ["build-demo-rat"]
 
+[[bin]]
+name = "demo-fwd"
+required-features = ["build-demo-fwd"]
+
 [features]
 default = []
 
 handling = []
 c-api = []
 
-build-c2-cli = []
-build-c2-webui = []
-build-c2s = ["build-c2-cli", "build-c2-webui"]
+build-c2cli = []
+build-c2webui = []
+build-c2s = ["build-c2cli", "build-c2webui"]
 
 build-demo-rat = ["handling"]
 build-demo-fwd = ["handling"]
