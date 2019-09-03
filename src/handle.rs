@@ -1,4 +1,4 @@
-use crate::{crypto::ser_encrypt, Packet, Command, Error};
+use crate::{crypto::ser_encrypt, Command, Error, Packet};
 
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as crypto;
@@ -39,8 +39,8 @@ where
             let encd = ser_encrypt(&new_cmd, rat_skey, &recver_pkey)?;
             bodies.push(encd);
         }
-        let new_packet =
-            bincode::serialize(&(headers, bodies)).map_err(Error::BincodeFail)?;
+        let new_packet = bincode::serialize(&(headers, bodies))
+            .map_err(Error::BincodeFail)?;
         for next in nexts {
             send_message(next, &new_packet).map_err(Error::SendFailed)?;
         }

@@ -5,10 +5,10 @@ extern crate serde;
 extern crate sodiumoxide;
 use sodiumoxide::crypto::box_ as nacl;
 
-pub use sodiumoxide::init as init;
-pub use nacl::PublicKey as PublicKey;
-pub use nacl::SecretKey as SecretKey;
-pub use nacl::Nonce as Nonce;
+pub use nacl::Nonce;
+pub use nacl::PublicKey;
+pub use nacl::SecretKey;
+pub use sodiumoxide::init;
 pub type Error = ();
 
 pub fn encrypt(
@@ -44,8 +44,10 @@ pub fn decrypt(
         return Err(crate::Error::CryptoFail(()));
     }
     let (nonceb, cipher) = cipher.split_at(nacl::NONCEBYTES);
-    let nonce = nacl::Nonce::from_slice(nonceb).ok_or(crate::Error::CryptoFail(()))?;
-    nacl::open(cipher, &nonce, &sender_pkey, &recver_skey).map_err(crate::Error::CryptoFail)
+    let nonce =
+        nacl::Nonce::from_slice(nonceb).ok_or(crate::Error::CryptoFail(()))?;
+    nacl::open(cipher, &nonce, &sender_pkey, &recver_skey)
+        .map_err(crate::Error::CryptoFail)
 }
 
 pub fn de_decrypt<T: serde::de::DeserializeOwned>(

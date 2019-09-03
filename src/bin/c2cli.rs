@@ -9,9 +9,13 @@ fn main() {
 
     let packet = mesher::Packet::serialize(
         &c2_skey,
-        vec![
-            (&rat2_pkey, mesher::Permission { what: mesher::Allowance::DATA, who: rat1_pkey.clone() }),
-        ],
+        vec![(
+            &rat2_pkey,
+            mesher::Permission {
+                what: mesher::Allowance::DATA,
+                who: rat1_pkey.clone(),
+            },
+        )],
         vec![
             (&rat1_pkey, mesher::Command::Forward("R2".to_string())),
             (&rat1_pkey, mesher::Command::Print("R1 print".to_string())),
@@ -23,8 +27,9 @@ fn main() {
                 ),
             ),
             (&rat2_pkey, mesher::Command::Print("R2 print".to_string())),
-        ]
-    ).expect("package");
+        ],
+    )
+    .expect("package");
     println!("packet len: {}", packet.len());
 
     std::io::stderr()

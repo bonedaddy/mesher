@@ -88,18 +88,24 @@ impl Packet {
         println!("Encrypting components");
         let header_rows = enc_vec(perms, sender_skey)?;
         let body_rows = enc_vec(commands, sender_skey)?;
-        println!("Serializing tuple ({}, {})", header_rows.len(), body_rows.len());
-        bincode::serialize::<SerdBlob>(&(header_rows, body_rows)).map_err(Error::BincodeFail)
+        println!(
+            "Serializing tuple ({}, {})",
+            header_rows.len(),
+            body_rows.len()
+        );
+        bincode::serialize::<SerdBlob>(&(header_rows, body_rows))
+            .map_err(Error::BincodeFail)
     }
 
     pub fn deserialize(
         from: &[u8],
         sender_pkey: &crypto::PublicKey,
-        recver_skey: &crypto::SecretKey
+        recver_skey: &crypto::SecretKey,
     ) -> Result<Vec<Command>> {
         crypto::init().map_err(Error::CryptoFail)?;
 
-        let (header_rows, footer_rows): SerdBlob = bincode::deserialize(from).map_err(Error::BincodeFail)?;
+        let (header_rows, footer_rows): SerdBlob =
+            bincode::deserialize(from).map_err(Error::BincodeFail)?;
 
         let mut perms = vec![Permission {
             what: Allowance::all(),
@@ -122,7 +128,8 @@ impl Packet {
         let mut res = vec![];
         for row in footer_rows {
             let decd = perms.iter().find_map(|perm| {
-                let decd = crypto::de_decrypt(&row, &perm.who, recver_skey).ok()?;
+                let decd =
+                    crypto::de_decrypt(&row, &perm.who, recver_skey).ok()?;
                 if !perm.allows(&decd) {
                     None
                 } else {
