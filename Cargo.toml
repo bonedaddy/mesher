@@ -1,9 +1,25 @@
 [package]
 name = "mesher"
 version = "0.1.0"
-authors = ["nxh"]
+authors = ["Nic Hartley <nic@cybers.eco>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "mesher-node"
+required-features = ["node"]
+
+[[example]]
+name = "send"
+required-features = ["node"]
+
+[[example]]
+name = "recv"
+required-features = ["node"]
+
+[features]
+default = []
+send = []
+receive = []
+node = []
 
 [dependencies]
