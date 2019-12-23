@@ -1,43 +1,9 @@
 [package]
 name = "mesher"
 version = "0.1.0"
-authors = ["Nic Hartley <nxh9052@rit.edu>"]
+authors = ["nxh"]
 edition = "2018"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-serde = { version = "1.0.98", features = ["derive"] }
-bincode = "1.1.4"
-sodiumoxide = "0.2.2"
-bitflags = "1.1.0"
-
-[[bin]]
-name = "c2cli"
-required-features = ["build-c2cli"]
-
-[[bin]]
-name = "c2webui"
-required-features = ["build-c2webui"]
-
-[[bin]]
-name = "demo-rat"
-required-features = ["build-demo-rat"]
-
-[[bin]]
-name = "demo-fwd"
-required-features = ["build-demo-fwd"]
-
-[features]
-default = []
-
-handling = []
-c-api = []
-
-build-c2cli = []
-build-c2webui = []
-build-c2s = ["build-c2cli", "build-c2webui"]
-
-build-demo-rat = ["handling"]
-build-demo-fwd = ["handling"]
-build-demos = ["build-demo-rat", "build-demo-fwd"]
-
-build-all = ["build-c2s", "build-demos"]
