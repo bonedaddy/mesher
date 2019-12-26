@@ -22,3 +22,4 @@ binaries = []
 c_api = []
 
 [dependencies]
+ring = "0.16.9"
