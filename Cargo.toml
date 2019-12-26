@@ -6,20 +6,19 @@ edition = "2018"
 
 [[bin]]
 name = "mesher-node"
-required-features = ["node"]
+required-features = ["binaries"]
 
 [[example]]
 name = "send"
-required-features = ["node"]
+required-features = ["binaries"]
 
 [[example]]
 name = "recv"
-required-features = ["node"]
+required-features = ["binaries"]
 
 [features]
 default = []
-send = []
-receive = []
-node = []
+binaries = []
+c_api = []
 
 [dependencies]
