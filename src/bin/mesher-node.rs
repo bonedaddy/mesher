@@ -1,3 +1,3 @@
 fn main() {
-    println!("Node: {}", mesher::mesher_test());
+    println!("Hello, node");
 }
