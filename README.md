@@ -63,17 +63,17 @@ The core of this project is the mesher library, which provides:
 - All of that functionality through a simple Rust library.
 - An optional C API, enabled through the `c_api` feature.
 
-There are also three binaries that can be compiled directly from this repo.
+There are also a binary and some examples that can be compiled directly from this repo.
 Enable them with the `binaries` feature.
 Note that building them might take much longer than just the library, so they're off by default.
 
-The first is `mesher-node`, which is installed when you `cargo install mesher`.
+The binary is `mesher-node`, which is installed when you `cargo install mesher`.
 It provides a simple but entirely functional node for a mesher network, and essentially just wraps the library in a ready-to-use executable.
 It can be communicated with over HTTP to localhost, the details of which are in the **mesher-node** section below.
 
-The second and third are `send` and `recv`, examples which just show how to communicate with `mesher-node`, allowing you to send strings and show received strings.
+The examples are `setup`, `send` and `recv`, examples which just show how to launch and communicate with `mesher-node`, allowing you to send strings and show received strings.
 Because they're designed as demos, they're included as Cargo examples, rather than binaries.
-They're likely to be almost useless in "real life", but should show quite clearly how to communicate with `mesher-node`, and even provide some code to pull from.
+They're incredibly insecure due to the way they generate keys, and **must be replaced** in any production usage, but generating and managing keys corrctly would be significantly more complex and obscure the actual point, demonstrating how to use `mesher-node`.
 
 ## Messages
 
