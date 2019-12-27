@@ -20,18 +20,25 @@ It uses normal [X25519] for key agreement, then [chacha20-poly1305@openssl.com] 
 All random generation is done through the OS's CSRNG, e.g. /dev/urandom on Linux.
 If the message is unsigned, sender public keys will be randomly generated per instruction and sent in cleartext as part of the message.
 If it's signed, then the sender public key for each instruction will be the same one used to sign the whole message, since the public key is already [recoverable] anyway and it's much less work on both ends.
-Signatures are handled with [Ed25519].
+Signatures are handled with [Ed25519]<sup>1</sup>.
 
 Designed to be flexible, mesher has a robust plugin system.
 The library itself has a rich set of hooks to allow for custom send and receive transports, as well as custom message types.
 The `mesher-node` binary takes plugins in shared library form (.so/.dll/.dylib, depending on platform) and so is compatible with any language that can compile to those.
 See its section for more information on the specific format.
 
+<sup>1:
+Note that mesher uses `ed25519-dalek`'s stronger `verify_strict` functionality.
+Because the same crate is used at both ends, compatibility is not a concern, but your use case may differ.
+If so, please see [A Note on Signature Malleability] from the `ed25519-dalek` documentation.
+</sup>
+
  [ring]: https://github.com/briansmith/ring
  [chacha20-poly1305@openssh.com]: http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
  [X25519]: https://crates.io/crates/x25519-dalek
  [Ed25519]: https://crates.io/crates/ed25519-dalek
  [recoverable]: https://crypto.stackexchange.com/a/18106
+ [A note on Signature Malleability]: https://github.com/dalek-cryptography/ed25519-dalek#a-note-on-signature-malleability
 
 ## TODO
 
