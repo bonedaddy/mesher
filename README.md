@@ -14,20 +14,24 @@ It focuses mostly on one-way message delivery, but does provide a way to give a 
 The project is largely divided into two parts: The primary focus, the mesher library, and the mesher-node binary, which provides a "generally good enough" wrapper around the binary so mesher can be incorporated quickly.
 
 Designed to be secure in transit, mesher messages are encrypted with open-source, well-vetted algorithms and code.
-Mesher itself contains no crypto math, instead preferring to use open-source and vetted libraries.
-The portions using crypto primitives are well-separated into their own submodule for easy auditing.
-Because mesher uses [ring], it encrypts instructions with [chacha20-poly1305@openssh.com].
-Keys are derived with [X25519], using keys generated randomly each time.
-Randomness is pulled from the OS by [`ring::rand::SystemRandom`].
+Mesher itself contains no crypto math, instead using open-source and vetted libraries, and common, vetted algorithms within them.
+The portions using crypto primitives are well-separated into their own submodule for easy auditing, and are based off well-explored concepts.
+It uses normal [X25519] for key agreement, then [chacha20-poly1305@openssl.com] through [ring] for authenticated encryption.
+All random generation is done through the OS's CSRNG, e.g. /dev/urandom on Linux.
+If the message is unsigned, sender public keys will be randomly generated per instruction and sent in cleartext as part of the message.
+If it's signed, then the sender public key for each instruction will be the same one used to sign the whole message, since the public key is already [recoverable] anyway and it's much less work on both ends.
+Signatures are handled with [Ed25519].
 
 Designed to be flexible, mesher has a robust plugin system.
 The library itself has a rich set of hooks to allow for custom send and receive transports, as well as custom message types.
 The `mesher-node` binary takes plugins in shared library form (.so/.dll/.dylib, depending on platform) and so is compatible with any language that can compile to those.
+See its section for more information on the specific format.
 
  [ring]: https://github.com/briansmith/ring
  [chacha20-poly1305@openssh.com]: http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
- [X25519]: https://briansmith.org/rustdoc/ring/agreement/index.html
- [`ring::rand::SystemRandom`]: https://briansmith.org/rustdoc/ring/rand/struct.SystemRandom.html
+ [X25519]: https://crates.io/crates/x25519-dalek
+ [Ed25519]: https://crates.io/crates/ed25519-dalek
+ [recoverable]: https://crypto.stackexchange.com/a/18106
 
 ## TODO
 
@@ -119,5 +123,7 @@ Mesher will automatically ignore duplicate messages received, within configurabl
 # mesher-node
 
 > **TODO**: Describe how to communicate with this: JSON over HTTP over `localhost:[port]`.
+> 
+> Remember to mention that mesher-node assumes its computer isn't hostile!
 
  [Pastebin]: https://pastebin.com/
