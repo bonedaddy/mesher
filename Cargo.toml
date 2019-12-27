@@ -3,6 +3,9 @@ name = "mesher"
 version = "0.0.1"
 authors = ["Nic Hartley <nic@cybers.eco>"]
 edition = "2018"
+description = "A library to make anonymized mesh networking easier."
+license = "BSD-3-Clause-Clear"
+repository = "https://github.com/nic-hartley/mesher"
 
 [[bin]]
 name = "mesher-node"
