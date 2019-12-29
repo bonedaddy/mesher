@@ -40,6 +40,7 @@ impl super::Transport for Debug {
   }
 
   fn recv(&mut self) -> Result<Vec<Vec<u8>>, Self::Fail> {
+    println!("Debug {} polled for more data", self.prefix);
     Ok(vec![])
   }
 }
