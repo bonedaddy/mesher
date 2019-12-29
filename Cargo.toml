@@ -27,4 +27,5 @@ c_api = []
 [dependencies]
 ring = "0.16.9"
 x25519-dalek = "0.6.0"
-# ed25519-dalek = "0.9.1"
+ed25519-dalek = "1.0.0-pre.3"
+itertools = "0.8.2"
