@@ -1,5 +1,5 @@
-use std::{error, fmt};
 use itertools::Itertools;
+use std::{error, fmt};
 
 #[derive(fmt::Debug)]
 pub struct DebugFail;
@@ -16,10 +16,12 @@ pub struct Debug {
 
 impl super::Transport for Debug {
   type Fail = DebugFail;
-  
+
   fn new(prefix: &str) -> Result<Self, Self::Fail> {
     println!("Creating debug transport under prefix {}", prefix);
-    Ok(Debug { prefix: prefix.to_owned() })
+    Ok(Debug {
+      prefix: prefix.to_owned(),
+    })
   }
 
   fn send(&mut self, blob: Vec<u8>) -> Result<(), Self::Fail> {
@@ -28,15 +30,18 @@ impl super::Transport for Debug {
     for s in 0..blob.len() / 16 {
       let bytes = blob[s..s + 16].iter().map(|b| format!("{:x}", b)).join("");
       println!("{:4x}: {}", s, bytes);
-  }
-  // last line
-  let overhang = blob.len() % 16;
-  if overhang > 0 {
+    }
+    // last line
+    let overhang = blob.len() % 16;
+    if overhang > 0 {
       let oh_start = blob.len() - overhang;
-      let bytes = blob[oh_start..].iter().map(|b| format!("{:02x}", b)).join("");
+      let bytes = blob[oh_start..]
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .join("");
       println!("{:4x}: {}", oh_start, bytes);
-  }
-  Ok(())
+    }
+    Ok(())
   }
 
   fn recv(&mut self) -> Result<Vec<Vec<u8>>, Self::Fail> {
