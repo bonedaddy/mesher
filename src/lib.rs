@@ -1,21 +1,52 @@
 #![warn(clippy::all)]
 
+pub mod fail;
+pub mod transports;
+mod packet;
+
 use std::collections::HashMap;
 pub use {
-  routing::Route,
   transports::{Transport, TransportFail},
   // x25519_dalek::PublicKey,
   // x25519_dalek::StaticSecret as SecretKey,
 };
 
+#[derive(Debug)]
+pub struct Route {
+  target: crate::PublicKey,
+  first_hop: String,
+  transports: Vec<(String, crate::PublicKey)>,
+  reply: Option<Box<Route>>,
+}
+
+impl Route {
+  pub fn to(target_key: crate::PublicKey, first_hop: &str) -> Route {
+    println!("Creating route to {:?}", target_key);
+    Route {
+      target: target_key,
+      first_hop: first_hop.to_owned(),
+      transports: Vec::new(),
+      reply: None,
+    }
+  }
+  pub fn with_transport(mut self, node_key: &crate::PublicKey, transport: &str) -> Route {
+    println!("Adding transport {} for node {:?}", transport, node_key);
+    self
+      .transports
+      .push((transport.to_owned(), node_key.clone()));
+    self
+  }
+  pub fn reply_to(mut self, path: Route) -> Route {
+    println!("Directing replies along {:?}", path);
+    self.reply = Some(Box::new(path));
+    self
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct PublicKey(pub usize);
 #[derive(Debug, Clone)]
 pub struct SecretKey(pub usize);
-
-pub mod fail;
-pub mod routing;
-pub mod transports;
 
 pub struct Message {
   contents: Vec<u8>,
@@ -33,19 +64,16 @@ pub struct Mesher {
 }
 
 impl Mesher {
-  pub fn signed(_source_sigs: Vec<crate::PublicKey>) -> Mesher {
+  pub fn signed(_own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
     }
   }
-  pub fn unsigned() -> Mesher {
+  pub fn unsigned(_own_skeys: Vec<crate::SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
     }
   }
-
-  pub fn add_own_key(&mut self, _k: crate::SecretKey) {}
-  pub fn add_sender_key(&mut self, _k: crate::PublicKey) {}
 
   pub fn add_transport<T: Transport + 'static>(
     &mut self,
@@ -57,7 +85,8 @@ impl Mesher {
     Ok(())
   }
 
-  pub fn send(&mut self, _message: &[u8], _route: Route) -> fail::Result<()> {
+  pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
+    println!("Sending {:?} along {:?}", message, route);
     Ok(())
   }
   pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {
