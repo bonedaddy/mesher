@@ -8,7 +8,9 @@ pub use {
   // x25519_dalek::StaticSecret as SecretKey,
 };
 
+#[derive(Debug, Clone)]
 pub struct PublicKey(pub usize);
+#[derive(Debug, Clone)]
 pub struct SecretKey(pub usize);
 
 pub mod fail;
