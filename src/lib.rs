@@ -102,21 +102,23 @@ impl Mesher {
 
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
     println!("Sending {:?} along {:?}", message, route);
-    println!("packet is: {:?}", packet::assemble(message, route, self.random_key()?));
+    let assembled = packet::assemble(message, route, self.random_key()?);
+    println!("packet is: {:?}", assembled);
     Ok(())
   }
   pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {
     Err(fail::Fail::NotYetImplemented("Message replies"))
   }
 
-  fn bounce(&mut self, _packet: &[u8], _transport: &str) -> fail::Result<()> {
-    Err(fail::Fail::NotYetImplemented("Mesher.bounce"))
+  fn bounce(&mut self, packet: &[u8], transport: &str) -> fail::Result<()> {
+    println!("Would send {:?} along {:?}", packet, transport);
+    Ok(())
   }
 
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
     // don't focus too much on how I got this...
     let packets = vec![
-      // TODO: put packet here
+      vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 109, 101, 115, 104, 0, 1, 2, 3, 23, 0, 0, 0, 0, 0, 0, 0, 112, 104, 118, 107, 4, 103, 104, 101, 120, 106, 61, 118, 104, 113, 103, 105, 108, 117, 118, 119, 107, 114, 115, 20, 0, 0, 0, 0, 0, 0, 0, 110, 102, 116, 105, 2, 101, 102, 99, 118, 104, 59, 116, 102, 111, 101, 113, 98, 117, 105, 50, 20, 0, 0, 0, 0, 0, 0, 0, 111, 103, 117, 106, 3, 102, 103, 100, 119, 105, 60, 117, 103, 112, 102, 114, 99, 118, 106, 52],
     ];
     let mut messages = vec![];
     for p in packets {
