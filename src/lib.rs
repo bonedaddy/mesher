@@ -1,8 +1,9 @@
 #![warn(clippy::all)]
 
 pub mod fail;
-mod packet;
 pub mod transports;
+mod packet;
+mod crypto;
 
 pub use transports::{Transport, TransportFail};
 use {rand::prelude::*, std::collections::HashMap};
