@@ -10,7 +10,7 @@ fn main() {
       &[1, 2, 3],
       Route::to(PublicKey(0), "debug:sendfirsthop")
         .with_transport(&PublicKey(1), "debug:sendpath1")
-        .with_transport(&PublicKey(2), "debug:sendpath2")
+        .with_transport(&PublicKey(2), "debug:sendpath2"),
     )
     .expect("Failed to send");
   for recv in mesher.recv().expect("Failed to receive") {

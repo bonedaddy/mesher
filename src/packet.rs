@@ -65,7 +65,7 @@ pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey)
   for (transport, key) in route.transports {
     chunks.push((Chunk::Transport(transport), key));
   }
-  
+
   println!("Chunks are:");
   for chunk in chunks.iter() {
     println!("- {:?}", chunk);
@@ -87,5 +87,8 @@ pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Vec<Result<Chunk
     }
   };
   println!("packet: {:?}", packet);
-  packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect()
+  packet
+    .into_iter()
+    .map(|c| Chunk::decrypt(c, keys))
+    .collect()
 }
