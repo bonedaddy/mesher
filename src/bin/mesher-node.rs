@@ -1,7 +1,7 @@
 use mesher::*;
 
 fn main() {
-  let mut mesher = Mesher::unsigned();
+  let mut mesher = Mesher::unsigned(vec![SecretKey(3)]);
   mesher
     .add_transport::<transports::Debug>("debug")
     .expect("Failed to set scheme");
@@ -11,11 +11,6 @@ fn main() {
       Route::to(PublicKey(0), "debug:sendfirsthop")
         .with_transport(&PublicKey(1), "debug:sendpath1")
         .with_transport(&PublicKey(2), "debug:sendpath2")
-        .reply_to(
-          Route::to(PublicKey(3), "debug:replyfirsthop")
-            .with_transport(&PublicKey(4), "debug:replypath1")
-            .with_transport(&PublicKey(5), "debug:replypath2"),
-        ),
     )
     .expect("Failed to send");
   for recv in mesher.recv().expect("Failed to receive") {

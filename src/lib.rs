@@ -1,22 +1,23 @@
 #![warn(clippy::all)]
 
 pub mod fail;
-pub mod transports;
 mod packet;
+pub mod transports;
 
-use std::collections::HashMap;
-pub use {
-  transports::{Transport, TransportFail},
-  // x25519_dalek::PublicKey,
-  // x25519_dalek::StaticSecret as SecretKey,
-};
+pub use transports::{Transport, TransportFail};
+use {rand::prelude::*, std::collections::HashMap};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct PublicKey(pub usize);
+#[derive(Debug, Clone)]
+pub struct SecretKey(pub usize);
+
+#[derive(Debug, Clone)]
 pub struct Route {
   target: crate::PublicKey,
   first_hop: String,
   transports: Vec<(String, crate::PublicKey)>,
-  reply: Option<Box<Route>>,
+  // TODO: Replies
 }
 
 impl Route {
@@ -26,7 +27,6 @@ impl Route {
       target: target_key,
       first_hop: first_hop.to_owned(),
       transports: Vec::new(),
-      reply: None,
     }
   }
   pub fn with_transport(mut self, node_key: &crate::PublicKey, transport: &str) -> Route {
@@ -36,21 +36,10 @@ impl Route {
       .push((transport.to_owned(), node_key.clone()));
     self
   }
-  pub fn reply_to(mut self, path: Route) -> Route {
-    println!("Directing replies along {:?}", path);
-    self.reply = Some(Box::new(path));
-    self
-  }
 }
-
-#[derive(Debug, Clone)]
-pub struct PublicKey(pub usize);
-#[derive(Debug, Clone)]
-pub struct SecretKey(pub usize);
 
 pub struct Message {
   contents: Vec<u8>,
-  reply_route: Option<Route>,
 }
 
 impl Message {
@@ -61,17 +50,26 @@ impl Message {
 
 pub struct Mesher {
   transports: HashMap<String, Box<dyn Transport>>,
+  own_skeys: Vec<crate::SecretKey>,
+  own_pkeys: Vec<crate::PublicKey>,
+  rng: rand::rngs::ThreadRng,
 }
 
 impl Mesher {
-  pub fn signed(_own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
+  pub fn signed(own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
+      own_pkeys: own_skeys.iter().map(|sk| PublicKey(sk.0)).collect(),
+      own_skeys,
+      rng: ThreadRng::default(),
     }
   }
-  pub fn unsigned(_own_skeys: Vec<crate::SecretKey>) -> Mesher {
+  pub fn unsigned(own_skeys: Vec<crate::SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
+      own_pkeys: own_skeys.iter().map(|sk| PublicKey(sk.0)).collect(),
+      own_skeys,
+      rng: ThreadRng::default(),
     }
   }
 
@@ -85,15 +83,45 @@ impl Mesher {
     Ok(())
   }
 
+  fn random_key(&mut self) -> fail::Result<PublicKey> {
+    self.own_pkeys.choose(&mut self.rng).map(Clone::clone).ok_or(fail::Fail::NoKeys)
+  }
+
+  fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
+    let dis = packet::disassemble(&pkt, &self.own_skeys);
+    let mut messages = vec![];
+    for piece in dis {
+      match piece {
+        Ok(packet::Chunk::Message(m)) => messages.push(Message { contents: m }),
+        Ok(packet::Chunk::Transport(to)) => self.bounce(&pkt, &to)?,
+        Err(_) => (/* piece not meant for us */),
+      }
+    }
+    Ok(messages)
+  }
+
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
     println!("Sending {:?} along {:?}", message, route);
+    println!("packet is: {:?}", packet::assemble(message, route, self.random_key()?));
     Ok(())
   }
   pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {
-    Ok(())
+    Err(fail::Fail::NotYetImplemented("Message replies"))
+  }
+
+  fn bounce(&mut self, _packet: &[u8], _transport: &str) -> fail::Result<()> {
+    Err(fail::Fail::NotYetImplemented("Mesher.bounce"))
   }
 
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
-    Ok(vec![])
+    // don't focus too much on how I got this...
+    let packets = vec![
+      // TODO: put packet here
+    ];
+    let mut messages = vec![];
+    for p in packets {
+      messages.append(&mut self.process_packet(p)?);
+    }
+    Ok(messages)
   }
 }
