@@ -5,13 +5,13 @@ lazy_static! {
 }
 
 #[allow(dead_code)]
-pub struct Mock {
+pub struct InMemory {
   listening: Vec<String>,
 }
 
-impl crate::Transport for Mock {
+impl crate::Transport for InMemory {
   fn new(_scheme: &str) -> Result<Self, crate::TransportFail> {
-    Ok(Mock { listening: vec![] })
+    Ok(InMemory { listening: vec![] })
   }
 
   fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), crate::TransportFail> {
