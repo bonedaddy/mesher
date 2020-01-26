@@ -24,5 +24,5 @@ pub trait Transport {
   fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail>;
 }
 
-#[cfg(any(test, feature = "debug"))]
+#[cfg(any(feature = "debug"))]
 pub mod debug;
