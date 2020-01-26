@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use mesher::*;
 
 fn make_mesher(name: &str) -> Mesher {
@@ -20,10 +22,14 @@ fn main() {
         .with_transport(&PublicKey::of("n2"), "mock:target"),
     )
     .expect("Failed to send");
+  println!("Sent messages! Running along pipeline...");
   for mesher in &mut [m_root, m_n1, m_n2, m_target] {
-    println!("---");
-    for recv in mesher.recv().expect("Failed to receive") {
-      println!("received: {:?}", recv.contents());
+    let recvd = mesher.recv().expect("Failed to receive");
+    println!("Received {} messages:", recvd.len());
+    for recv in recvd.into_iter() {
+      println!("- {}", recv.contents().iter().map(|b| format!("{:02x}", b)).join(" "));
     }
+    println!("---");
   }
+  println!("Did it go through?");
 }

@@ -50,22 +50,12 @@ impl Chunk {
 }
 
 pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey) -> Vec<u8> {
-  println!(
-    "Assembling packet for {:?} to go along {:?}",
-    message, route
-  );
-
   let mut chunks = vec![
     (Chunk::Message(message.to_vec()), route.target.clone()),
     (Chunk::Transport(route.first_hop), own_pkey),
   ];
   for (transport, key) in route.transports {
     chunks.push((Chunk::Transport(transport), key));
-  }
-
-  println!("Chunks are:");
-  for chunk in chunks.iter() {
-    println!("- {:?}", chunk);
   }
 
   let mut packet = vec![];
@@ -78,10 +68,7 @@ pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey)
 pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Vec<Result<Chunk, Vec<u8>>> {
   let packet: Vec<Vec<u8>> = match bincode::deserialize(packet) {
     Ok(v) => v,
-    Err(e) => {
-      println!("Errored with {:?}", e);
-      return vec![];
-    }
+    Err(_) => return vec![],
   };
   packet
     .into_iter()

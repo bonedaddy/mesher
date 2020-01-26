@@ -25,7 +25,6 @@ pub struct Route {
 
 impl Route {
   pub fn to(target_key: crate::PublicKey, first_hop: &str) -> Route {
-    println!("Creating route to {:?}", target_key);
     Route {
       target: target_key,
       first_hop: first_hop.to_owned(),
@@ -33,7 +32,6 @@ impl Route {
     }
   }
   pub fn with_transport(mut self, node_key: &crate::PublicKey, transport: &str) -> Route {
-    println!("Adding transport {} for node {:?}", transport, node_key);
     self
       .transports
       .push((transport.to_owned(), node_key.clone()));
@@ -111,7 +109,6 @@ impl Mesher {
 
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
     let dis = packet::disassemble(&pkt, &self.own_skeys);
-    println!("Disassembled packet: {:?}", dis);
     let mut messages = vec![];
     for piece in dis {
       match piece {
@@ -124,9 +121,7 @@ impl Mesher {
   }
 
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
-    println!("Sending message {:?} along {:?}", message, route);
     let assembled = packet::assemble(message, route, self.random_key()?);
-    println!("Packet being sent is: {:?}", assembled);
     self.process_packet(assembled)?;
     Ok(())
   }
@@ -135,7 +130,6 @@ impl Mesher {
   }
 
   fn bounce(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
-    println!("Sending {:?} along {:?}", packet, path);
     let transport = self.get_transport_for_path(path)?;
     transport.send(path.to_owned(), packet.to_vec())?;
     Ok(())
@@ -147,12 +141,10 @@ impl Mesher {
     for (_, transport) in self.transports.iter_mut() {
       packets.append(&mut transport.receive()?);
     }
-    println!("Packets gotten are: {:?}", packets);
     let mut messages = vec![];
     for p in packets {
       messages.append(&mut self.process_packet(p)?);
     }
-    println!("Messages received: {:?}", messages);
     Ok(messages)
   }
 }
