@@ -1,19 +1,20 @@
 use itertools::Itertools;
+use mesher::prelude::*;
 
 #[allow(dead_code)]
 pub struct Printer {
   scheme: String,
 }
 
-impl crate::Transport for Printer {
-  fn new(scheme: &str) -> Result<Self, crate::TransportFail> {
+impl Transport for Printer {
+  fn new(scheme: &str) -> Result<Self, TransportFail> {
     println!("Creating Printer transport under scheme {}", scheme);
     Ok(Printer {
       scheme: scheme.to_owned(),
     })
   }
 
-  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), crate::TransportFail> {
+  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
     println!(
       "Printer {} sent {} bytes to {}. In hex:",
       self.scheme,
@@ -38,12 +39,12 @@ impl crate::Transport for Printer {
     Ok(())
   }
 
-  fn receive(&mut self) -> Result<Vec<Vec<u8>>, crate::TransportFail> {
+  fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail> {
     println!("Printer {} polled for more data", self.scheme);
     Ok(vec![])
   }
 
-  fn listen(&mut self, path: String) -> Result<(), crate::TransportFail> {
+  fn listen(&mut self, path: String) -> Result<(), TransportFail> {
     println!("Printer {} told to listen on path {}", self.scheme, path);
     Ok(())
   }

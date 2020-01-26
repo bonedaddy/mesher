@@ -1,0 +1,10 @@
+[package]
+name = "mesher_debug"
+version = "0.1.0"
+authors = ["Nic Hartley <nic@cybers.eco>"]
+edition = "2018"
+
+[dependencies]
+mesher = { path = "../mesher" }
+itertools = "0.8.2"
+lazy_static = "1.4.0"
