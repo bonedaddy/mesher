@@ -4,6 +4,7 @@ lazy_static! {
   static ref PACKETS: Mutex<HashMap<String, Vec<Vec<u8>>>> = Mutex::new(HashMap::new());
 }
 
+#[allow(dead_code)]
 pub struct Mock {
   listening: Vec<String>,
 }

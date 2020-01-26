@@ -41,6 +41,7 @@ impl Route {
   }
 }
 
+#[derive(Debug)]
 pub struct Message {
   contents: Vec<u8>,
 }
@@ -81,8 +82,8 @@ impl Mesher {
       .insert(scheme.to_owned(), Box::new(T::new(scheme)?));
     Ok(())
   }
-
-  pub fn listen_on(&mut self, path: &str) -> Result<(), TransportFail> {
+  
+  fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, TransportFail> {
     let scheme = path
       .splitn(2, ':')
       .next()
@@ -90,11 +91,14 @@ impl Mesher {
         "no colon-delimited scheme segment",
       ))?
       .to_owned();
-    let transport = self
+    self
       .transports
       .get_mut(&scheme)
-      .ok_or(transports::TransportFail::UnregisteredScheme(scheme))?;
-    transport.listen(path.to_owned())
+      .ok_or(transports::TransportFail::UnregisteredScheme(scheme))
+  }
+
+  pub fn listen_on(&mut self, path: &str) -> Result<(), TransportFail> {
+    self.get_transport_for_path(path)?.listen(path.to_owned())
   }
 
   fn random_key(&mut self) -> fail::Result<PublicKey> {
@@ -130,24 +134,25 @@ impl Mesher {
     Err(fail::Fail::NotYetImplemented("Message replies"))
   }
 
-  fn bounce(&mut self, packet: &[u8], transport: &str) -> fail::Result<()> {
-    println!("Would send {:?} along {:?}", packet, transport);
+  fn bounce(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
+    println!("Sending {:?} along {:?}", packet, path);
+    let transport = self.get_transport_for_path(path)?;
+    transport.send(path.to_owned(), packet.to_vec())?;
     Ok(())
   }
 
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
     // don't focus too much on how I got this...
-    let packets = vec![vec![
-      4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 244, 236, 250, 239, 135, 136, 137, 138, 23,
-      0, 0, 0, 0, 0, 0, 0, 49, 41, 55, 44, 197, 40, 41, 38, 57, 43, 254, 55, 41, 50, 40, 42, 45,
-      54, 55, 56, 44, 51, 52, 20, 0, 0, 0, 0, 0, 0, 0, 12, 4, 18, 7, 160, 3, 4, 1, 20, 6, 217, 18,
-      4, 13, 3, 15, 0, 19, 7, 208, 20, 0, 0, 0, 0, 0, 0, 0, 13, 5, 19, 8, 161, 4, 5, 2, 21, 7, 218,
-      19, 5, 14, 4, 16, 1, 20, 8, 210,
-    ]];
+    let mut packets = vec![];
+    for (_, transport) in self.transports.iter_mut() {
+      packets.append(&mut transport.receive()?);
+    }
+    println!("Packets gotten are: {:?}", packets);
     let mut messages = vec![];
     for p in packets {
       messages.append(&mut self.process_packet(p)?);
     }
+    println!("Messages received: {:?}", messages);
     Ok(messages)
   }
 }
