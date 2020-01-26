@@ -2,7 +2,8 @@ use mesher::*;
 
 fn make_mesher(name: &str) -> Mesher {
   let mut m = Mesher::unsigned(vec![SecretKey::of(name)]);
-  m.add_transport::<transports::debug::Printer>("print").expect("failed to add printer");
+  m.add_transport::<transports::debug::Printer>("print")
+    .expect("failed to add printer");
   // m.add_transport::<transports::debug::Mock>("mock").expect("failed to add mock");
   // m.listen_on(&format!("mock:{}", name))
   m

@@ -1,7 +1,4 @@
-use std::{
-  collections::HashMap,
-  sync::Mutex,
-};
+use std::{collections::HashMap, sync::Mutex};
 
 lazy_static! {
   static ref PACKETS: Mutex<HashMap<String, Vec<Vec<u8>>>> = Mutex::new(HashMap::new());
@@ -20,7 +17,9 @@ impl crate::Transport for Mock {
     let mut packets = PACKETS.lock().expect("poisoned lock?");
     match packets.get_mut(&path) {
       Some(v) => v.push(blob),
-      None => {packets.insert(path, vec![blob]); },
+      None => {
+        packets.insert(path, vec![blob]);
+      }
     };
     Ok(())
   }
@@ -32,8 +31,17 @@ impl crate::Transport for Mock {
 
   fn receive(&mut self) -> Result<Vec<Vec<u8>>, crate::TransportFail> {
     let mut packets = PACKETS.lock().expect("poisoned lock?");
-    Ok(self.listening.iter().flat_map(|path| {
-      packets.insert(path.clone(), vec![]).unwrap_or(vec![]).into_iter()
-    }).collect())
+    Ok(
+      self
+        .listening
+        .iter()
+        .flat_map(|path| {
+          packets
+            .insert(path.clone(), vec![])
+            .unwrap_or(vec![])
+            .into_iter()
+        })
+        .collect(),
+    )
   }
 }
