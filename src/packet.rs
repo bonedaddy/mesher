@@ -22,14 +22,11 @@ impl Chunk {
         b
       }
     };
-    raw
-      .into_iter()
-      .map(|c| c.wrapping_add(key.0 as u8))
-      .collect()
+    key.encrypt(&raw)
   }
 
   fn decrypt_onekey(bytes: &[u8], key: &crate::SecretKey) -> Result<Chunk, ()> {
-    let mut attempt_dec: Vec<_> = bytes.iter().map(|b| b.wrapping_sub(key.0 as u8)).collect();
+    let mut attempt_dec = key.decrypt(bytes)?;
     if attempt_dec.len() < 5 || &attempt_dec[0..4] != MAGIC {
       return Err(());
     }
@@ -86,7 +83,6 @@ pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Vec<Result<Chunk
       return vec![];
     }
   };
-  println!("packet: {:?}", packet);
   packet
     .into_iter()
     .map(|c| Chunk::decrypt(c, keys))

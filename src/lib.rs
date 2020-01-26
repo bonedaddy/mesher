@@ -5,13 +5,11 @@ pub mod transports;
 mod packet;
 mod crypto;
 
-pub use transports::{Transport, TransportFail};
+pub use {
+  transports::{Transport, TransportFail},
+  crypto::{PublicKey, SecretKey},
+};
 use {rand::prelude::*, std::collections::HashMap};
-
-#[derive(Debug, Clone)]
-pub struct PublicKey(pub usize);
-#[derive(Debug, Clone)]
-pub struct SecretKey(pub usize);
 
 #[derive(Debug, Clone)]
 pub struct Route {
@@ -58,17 +56,13 @@ pub struct Mesher {
 
 impl Mesher {
   pub fn signed(own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
-    Mesher {
-      transports: HashMap::new(),
-      own_pkeys: own_skeys.iter().map(|sk| PublicKey(sk.0)).collect(),
-      own_skeys,
-      rng: ThreadRng::default(),
-    }
+    // TODO: outgoing packet signature setup
+    Mesher::unsigned(own_skeys)
   }
   pub fn unsigned(own_skeys: Vec<crate::SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
-      own_pkeys: own_skeys.iter().map(|sk| PublicKey(sk.0)).collect(),
+      own_pkeys: own_skeys.iter().map(SecretKey::pkey).collect(),
       own_skeys,
       rng: ThreadRng::default(),
     }
@@ -122,13 +116,7 @@ impl Mesher {
 
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
     // don't focus too much on how I got this...
-    let packets = vec![vec![
-      4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 109, 101, 115, 104, 0, 1, 2, 3, 23, 0, 0, 0,
-      0, 0, 0, 0, 112, 104, 118, 107, 4, 103, 104, 101, 120, 106, 61, 118, 104, 113, 103, 105, 108,
-      117, 118, 119, 107, 114, 115, 20, 0, 0, 0, 0, 0, 0, 0, 110, 102, 116, 105, 2, 101, 102, 99,
-      118, 104, 59, 116, 102, 111, 101, 113, 98, 117, 105, 50, 20, 0, 0, 0, 0, 0, 0, 0, 111, 103,
-      117, 106, 3, 102, 103, 100, 119, 105, 60, 117, 103, 112, 102, 114, 99, 118, 106, 52,
-    ]];
+    let packets = vec![vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 244, 236, 250, 239, 135, 136, 137, 138, 23, 0, 0, 0, 0, 0, 0, 0, 49, 41, 55, 44, 197, 40, 41, 38, 57, 43, 254, 55, 41, 50, 40, 42, 45, 54, 55, 56, 44, 51, 52, 20, 0, 0, 0, 0, 0, 0, 0, 12, 4, 18, 7, 160, 3, 4, 1, 20, 6, 217, 18, 4, 13, 3, 15, 0, 19, 7, 208, 20, 0, 0, 0, 0, 0, 0, 0, 13, 5, 19, 8, 161, 4, 5, 2, 21, 7, 218, 19, 5, 14, 4, 16, 1, 20, 8, 210]];
     let mut messages = vec![];
     for p in packets {
       messages.append(&mut self.process_packet(p)?);
