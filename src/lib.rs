@@ -125,9 +125,6 @@ impl Mesher {
     self.process_packet(assembled)?;
     Ok(())
   }
-  pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {
-    Err(fail::Fail::NotYetImplemented("Message replies"))
-  }
 
   fn bounce(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
     let transport = self.get_transport_for_path(path)?;
