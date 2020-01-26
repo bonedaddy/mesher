@@ -5,15 +5,16 @@
 extern crate lazy_static;
 
 mod crypto;
-pub mod fail;
+mod fail;
 mod packet;
 pub mod transports;
 
-pub use {
+use {
   crypto::{PublicKey, SecretKey},
   transports::{Transport, TransportFail},
+  rand::prelude::*,
+  std::collections::HashMap,
 };
-use {rand::prelude::*, std::collections::HashMap};
 
 #[derive(Debug, Clone)]
 pub struct Route {

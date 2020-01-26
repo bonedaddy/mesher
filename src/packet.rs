@@ -56,7 +56,7 @@ pub fn assemble(
   message: &[u8],
   route: crate::Route,
   own_pkey: crate::PublicKey,
-) -> Result<Vec<u8>, crate::TransportFail> {
+) -> Result<Vec<u8>, crate::transports::TransportFail> {
   let mut chunks = vec![
     (Chunk::Message(message.to_vec()), route.target.clone()),
     (Chunk::Transport(route.first_hop), own_pkey),
@@ -75,7 +75,7 @@ pub fn assemble(
 pub fn disassemble(
   packet: &[u8],
   keys: &[crate::SecretKey],
-) -> Result<Vec<Chunk>, crate::TransportFail> {
+) -> Result<Vec<Chunk>, crate::transports::TransportFail> {
   bincode::deserialize::<Vec<Vec<u8>>>(packet)
     .map(|packet| {
       packet

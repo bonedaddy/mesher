@@ -8,7 +8,7 @@ impl PublicKey {
     PublicKey(sum, name.to_owned())
   }
 
-  pub fn encrypt(&self, data: &[u8]) -> Vec<u8> {
+  pub(crate) fn encrypt(&self, data: &[u8]) -> Vec<u8> {
     data.iter().map(|b| b.wrapping_add(self.0)).collect()
   }
 }
@@ -21,7 +21,7 @@ impl SecretKey {
     SecretKey(sum, name.to_owned())
   }
 
-  pub fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
+  pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
     Ok(ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect())
   }
 
