@@ -182,7 +182,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "mesher"
-version = "0.1.0"
+version = "0.0.9"
 dependencies = [
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.3 (registry+https://github.com/rust-lang/crates.io-index)",
