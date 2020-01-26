@@ -3,7 +3,7 @@ use mesher::*;
 fn main() {
   let mut mesher = Mesher::unsigned(vec![SecretKey::of("root")]);
   mesher
-    .add_transport::<transports::Debug>("debug")
+    .add_transport::<transports::debug::Printer>("debug")
     .expect("Failed to set scheme");
   mesher
     .send(

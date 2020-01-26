@@ -21,7 +21,8 @@ required-features = ["binaries"]
 
 [features]
 default = []
-binaries = []
+debug = []
+binaries = ["debug"]
 c_api = []
 
 [dependencies]

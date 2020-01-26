@@ -88,6 +88,7 @@ impl Mesher {
 
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
     let dis = packet::disassemble(&pkt, &self.own_skeys);
+    println!("Disassembled packet: {:?}", dis);
     let mut messages = vec![];
     for piece in dis {
       match piece {
@@ -100,9 +101,9 @@ impl Mesher {
   }
 
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
-    println!("Sending {:?} along {:?}", message, route);
+    println!("Sending message {:?} along {:?}", message, route);
     let assembled = packet::assemble(message, route, self.random_key()?);
-    println!("packet is: {:?}", assembled);
+    println!("Packet being sent is: {:?}", assembled);
     Ok(())
   }
   pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {

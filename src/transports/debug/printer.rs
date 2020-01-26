@@ -1,23 +1,23 @@
 use itertools::Itertools;
 
-pub struct Debug {
+pub struct Printer {
   scheme: String,
 }
 
-impl super::Transport for Debug {
-  fn new(scheme: &str) -> Result<Self, super::TransportFail> {
+impl crate::Transport for Printer {
+  fn new(scheme: &str) -> Result<Self, crate::TransportFail> {
     if !scheme.starts_with('d') {
-      return Err(super::TransportFail::UnsupportedScheme("must start with d"));
+      return Err(crate::TransportFail::UnsupportedScheme("must start with d"));
     }
-    println!("Creating debug transport under scheme {}", scheme);
-    Ok(Debug {
+    println!("Creating Printer transport under scheme {}", scheme);
+    Ok(Printer {
       scheme: scheme.to_owned(),
     })
   }
 
-  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), super::TransportFail> {
+  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), crate::TransportFail> {
     println!(
-      "Debug {} sent {} bytes to {}. In hex:",
+      "Printer {} sent {} bytes to {}. In hex:",
       self.scheme,
       path,
       blob.len()
@@ -40,8 +40,8 @@ impl super::Transport for Debug {
     Ok(())
   }
 
-  fn recv(&mut self) -> Result<Vec<Vec<u8>>, super::TransportFail> {
-    println!("Debug {} polled for more data", self.scheme);
+  fn recv(&mut self) -> Result<Vec<Vec<u8>>, crate::TransportFail> {
+    println!("Printer {} polled for more data", self.scheme);
     Ok(vec![])
   }
 }
