@@ -108,20 +108,20 @@ impl Mesher {
   }
 
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
-    let dis = packet::disassemble(&pkt, &self.own_skeys);
+    let dis = packet::disassemble(&pkt, &self.own_skeys)?;
     let mut messages = vec![];
     for piece in dis {
       match piece {
-        Ok(packet::Chunk::Message(m)) => messages.push(Message { contents: m }),
-        Ok(packet::Chunk::Transport(to)) => self.bounce(&pkt, &to)?,
-        Err(_) => (/* piece not meant for us */),
+        packet::Chunk::Message(m) => messages.push(Message { contents: m }),
+        packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
+        packet::Chunk::Encrypted(_) => (/* piece not meant for us */),
       }
     }
     Ok(messages)
   }
 
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
-    let assembled = packet::assemble(message, route, self.random_key()?);
+    let assembled = packet::assemble(message, route, self.random_key()?)?;
     self.process_packet(assembled)?;
     Ok(())
   }

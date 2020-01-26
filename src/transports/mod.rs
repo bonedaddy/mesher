@@ -1,6 +1,9 @@
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum TransportFail {
+  // the packet we received isn't formatted validly
+  InvalidPacket,
+
   // the transport specified is incompatible with the assigned scheme
   UnsupportedScheme(&'static str),
   // the URL is syntactically invalid

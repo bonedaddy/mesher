@@ -4,6 +4,8 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 pub enum Chunk {
   Message(Vec<u8>),
   Transport(String),
+// Reply(...),
+  Encrypted(Vec<u8>)
 }
 
 // TODO: real crypto
@@ -21,6 +23,7 @@ impl Chunk {
         b.append(&mut t.into_bytes());
         b
       }
+      Chunk::Encrypted(v) => return v,
     };
     key.encrypt(&raw)
   }
@@ -39,17 +42,17 @@ impl Chunk {
     }
   }
 
-  fn decrypt(bytes: Vec<u8>, keys: &[crate::SecretKey]) -> Result<Chunk, Vec<u8>> {
+  fn decrypt(bytes: Vec<u8>, keys: &[crate::SecretKey]) -> Chunk {
     for key in keys {
       if let Ok(dec) = Self::decrypt_onekey(&bytes, key) {
-        return Ok(dec);
+        return dec;
       }
     }
-    Err(bytes)
+    Chunk::Encrypted(bytes)
   }
 }
 
-pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey) -> Vec<u8> {
+pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey) -> Result<Vec<u8>, crate::TransportFail> {
   let mut chunks = vec![
     (Chunk::Message(message.to_vec()), route.target.clone()),
     (Chunk::Transport(route.first_hop), own_pkey),
@@ -62,16 +65,14 @@ pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey)
   for (chunk, key) in chunks.into_iter() {
     packet.push(chunk.encrypt(key));
   }
-  bincode::serialize(&packet).expect("Serialiation failed")
+  bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
 }
 
-pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Vec<Result<Chunk, Vec<u8>>> {
-  let packet: Vec<Vec<u8>> = match bincode::deserialize(packet) {
-    Ok(v) => v,
-    Err(_) => return vec![],
-  };
-  packet
-    .into_iter()
-    .map(|c| Chunk::decrypt(c, keys))
-    .collect()
+pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::TransportFail> {
+  bincode::deserialize::<Vec<Vec<u8>>>(packet)
+    .map(|packet| packet
+      .into_iter()
+      .map(|c| Chunk::decrypt(c, keys))
+      .collect())
+    .map_err(|_| crate::TransportFail::InvalidPacket)
 }
