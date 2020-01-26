@@ -6,9 +6,6 @@ pub struct Printer {
 
 impl crate::Transport for Printer {
   fn new(scheme: &str) -> Result<Self, crate::TransportFail> {
-    if !scheme.starts_with('d') {
-      return Err(crate::TransportFail::UnsupportedScheme("must start with d"));
-    }
     println!("Creating Printer transport under scheme {}", scheme);
     Ok(Printer {
       scheme: scheme.to_owned(),
@@ -40,8 +37,13 @@ impl crate::Transport for Printer {
     Ok(())
   }
 
-  fn recv(&mut self) -> Result<Vec<Vec<u8>>, crate::TransportFail> {
+  fn receive(&mut self) -> Result<Vec<Vec<u8>>, crate::TransportFail> {
     println!("Printer {} polled for more data", self.scheme);
     Ok(vec![])
+  }
+
+  fn listen(&mut self, path: String) -> Result<(), crate::TransportFail> {
+    println!("Printer {} told to listen on path {}", self.scheme, path);
+    Ok(())
   }
 }

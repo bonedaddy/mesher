@@ -78,6 +78,12 @@ impl Mesher {
     Ok(())
   }
 
+  pub fn listen_on(&mut self, path: &str) -> Result<(), TransportFail> {
+    let scheme = path.splitn(2, ':').next().ok_or(transports::TransportFail::InvalidURL("no colon-delimited scheme segment"))?.to_owned();
+    let transport = self.transports.get_mut(&scheme).ok_or(transports::TransportFail::UnregisteredScheme(scheme))?;
+    transport.listen(path.to_owned())
+  }
+
   fn random_key(&mut self) -> fail::Result<PublicKey> {
     self
       .own_pkeys
@@ -104,6 +110,7 @@ impl Mesher {
     println!("Sending message {:?} along {:?}", message, route);
     let assembled = packet::assemble(message, route, self.random_key()?);
     println!("Packet being sent is: {:?}", assembled);
+    self.process_packet(assembled)?;
     Ok(())
   }
   pub fn reply(&mut self, _message: &[u8], _to: Message) -> fail::Result<()> {
