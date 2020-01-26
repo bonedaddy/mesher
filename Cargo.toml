@@ -20,7 +20,7 @@ name = "receive"
 required-features = ["binaries"]
 
 [[example]]
-name = "mocked"
+name = "allinone"
 required-features = ["debug"]
 
 [features]
