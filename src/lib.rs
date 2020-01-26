@@ -1,13 +1,13 @@
 #![warn(clippy::all)]
 
-pub mod fail;
-pub mod transports;
-mod packet;
 mod crypto;
+pub mod fail;
+mod packet;
+pub mod transports;
 
 pub use {
-  transports::{Transport, TransportFail},
   crypto::{PublicKey, SecretKey},
+  transports::{Transport, TransportFail},
 };
 use {rand::prelude::*, std::collections::HashMap};
 
@@ -117,7 +117,13 @@ impl Mesher {
 
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
     // don't focus too much on how I got this...
-    let packets = vec![vec![4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 244, 236, 250, 239, 135, 136, 137, 138, 23, 0, 0, 0, 0, 0, 0, 0, 49, 41, 55, 44, 197, 40, 41, 38, 57, 43, 254, 55, 41, 50, 40, 42, 45, 54, 55, 56, 44, 51, 52, 20, 0, 0, 0, 0, 0, 0, 0, 12, 4, 18, 7, 160, 3, 4, 1, 20, 6, 217, 18, 4, 13, 3, 15, 0, 19, 7, 208, 20, 0, 0, 0, 0, 0, 0, 0, 13, 5, 19, 8, 161, 4, 5, 2, 21, 7, 218, 19, 5, 14, 4, 16, 1, 20, 8, 210]];
+    let packets = vec![vec![
+      4, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 244, 236, 250, 239, 135, 136, 137, 138, 23,
+      0, 0, 0, 0, 0, 0, 0, 49, 41, 55, 44, 197, 40, 41, 38, 57, 43, 254, 55, 41, 50, 40, 42, 45,
+      54, 55, 56, 44, 51, 52, 20, 0, 0, 0, 0, 0, 0, 0, 12, 4, 18, 7, 160, 3, 4, 1, 20, 6, 217, 18,
+      4, 13, 3, 15, 0, 19, 7, 208, 20, 0, 0, 0, 0, 0, 0, 0, 13, 5, 19, 8, 161, 4, 5, 2, 21, 7, 218,
+      19, 5, 14, 4, 16, 1, 20, 8, 210,
+    ]];
     let mut messages = vec![];
     for p in packets {
       messages.append(&mut self.process_packet(p)?);
