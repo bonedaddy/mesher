@@ -24,9 +24,9 @@ pub struct Route {
 }
 
 impl Route {
-  pub fn to(target_key: crate::PublicKey, first_hop: &str) -> Route {
+  pub fn to(target_key: &crate::PublicKey, first_hop: &str) -> Route {
     Route {
-      target: target_key,
+      target: target_key.clone(),
       first_hop: first_hop.to_owned(),
       transports: Vec::new(),
     }
@@ -80,9 +80,12 @@ impl Mesher {
       .insert(scheme.to_owned(), Box::new(T::new(scheme)?));
     Ok(())
   }
-  
+
   #[allow(clippy::borrowed_box)]
-  fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, TransportFail> {
+  fn get_transport_for_path(
+    &mut self,
+    path: &str,
+  ) -> Result<&mut Box<dyn Transport>, TransportFail> {
     let scheme = path
       .splitn(2, ':')
       .next()

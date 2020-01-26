@@ -4,8 +4,8 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 pub enum Chunk {
   Message(Vec<u8>),
   Transport(String),
-// Reply(...),
-  Encrypted(Vec<u8>)
+  // Reply(...),
+  Encrypted(Vec<u8>),
 }
 
 // TODO: real crypto
@@ -52,7 +52,11 @@ impl Chunk {
   }
 }
 
-pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey) -> Result<Vec<u8>, crate::TransportFail> {
+pub fn assemble(
+  message: &[u8],
+  route: crate::Route,
+  own_pkey: crate::PublicKey,
+) -> Result<Vec<u8>, crate::TransportFail> {
   let mut chunks = vec![
     (Chunk::Message(message.to_vec()), route.target.clone()),
     (Chunk::Transport(route.first_hop), own_pkey),
@@ -68,11 +72,16 @@ pub fn assemble(message: &[u8], route: crate::Route, own_pkey: crate::PublicKey)
   bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
 }
 
-pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::TransportFail> {
+pub fn disassemble(
+  packet: &[u8],
+  keys: &[crate::SecretKey],
+) -> Result<Vec<Chunk>, crate::TransportFail> {
   bincode::deserialize::<Vec<Vec<u8>>>(packet)
-    .map(|packet| packet
-      .into_iter()
-      .map(|c| Chunk::decrypt(c, keys))
-      .collect())
+    .map(|packet| {
+      packet
+        .into_iter()
+        .map(|c| Chunk::decrypt(c, keys))
+        .collect()
+    })
     .map_err(|_| crate::TransportFail::InvalidPacket)
 }
