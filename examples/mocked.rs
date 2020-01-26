@@ -39,14 +39,7 @@ fn main() {
     let recvd = mesher.recv().expect("Failed to receive");
     println!("Received {} message(s)", recvd.len());
     for recv in recvd.into_iter() {
-      println!(
-        "- {}",
-        recv
-          .contents()
-          .iter()
-          .map(|b| format!("{:02x}", b))
-          .join(" ")
-      );
+      println!("- {:?}", recv.contents());
     }
   }
   println!("Did it go through?");
