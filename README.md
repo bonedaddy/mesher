@@ -134,3 +134,21 @@ Mesher will automatically ignore duplicate messages received, within configurabl
 > Remember to mention that mesher-node assumes its computer isn't hostile!
 
  [Pastebin]: https://pastebin.com/
+
+# TODO
+
+Some large, overarching tasks that need to be completed:
+
+- More transparent packet format
+  - reduce/remove dependency on bincode
+  - write custom serialization
+- Implement actual crypto to encrypt packet chunks
+  - Currently intentionally very weak, so I can trivially break it if necessary for debugging
+- General code cleanup
+  - It's a bit of a mess currently, with a lot of stuff all in one file
+  - Will likely make liberal use of `pub(crate)`
+- Testing
+  - Both unit and integration tests
+  - One block of tests for the mesher core
+  - One per transport
+  - One set of integration tests 
