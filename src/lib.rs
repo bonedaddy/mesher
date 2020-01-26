@@ -81,6 +81,7 @@ impl Mesher {
     Ok(())
   }
   
+  #[allow(clippy::borrowed_box)]
   fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, TransportFail> {
     let scheme = path
       .splitn(2, ':')
