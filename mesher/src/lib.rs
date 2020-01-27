@@ -32,14 +32,8 @@ impl Route {
       transports: Vec::new(),
     }
   }
-  pub fn add_hop(
-    mut self,
-    node_key: &crate::PublicKey,
-    path: &str,
-  ) -> Route {
-    self
-      .transports
-      .push((path.to_owned(), node_key.clone()));
+  pub fn add_hop(mut self, node_key: &crate::PublicKey, path: &str) -> Route {
+    self.transports.push((path.to_owned(), node_key.clone()));
     self
   }
 }
