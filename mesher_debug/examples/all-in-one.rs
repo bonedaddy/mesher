@@ -21,15 +21,15 @@ fn main() {
     .send(
       &[2],
       Route::to(&PublicKey::of("target"), "mock:n2")
-        .with_transport(&PublicKey::of("n2"), "mock:target"),
+        .add_hop(&PublicKey::of("n2"), "mock:target"),
     )
     .expect("Failed to send 2");
   m_root
     .send(
       &[3],
       Route::to(&PublicKey::of("target"), "mock:n1")
-        .with_transport(&PublicKey::of("n1"), "mock:n2")
-        .with_transport(&PublicKey::of("n2"), "mock:target"),
+        .add_hop(&PublicKey::of("n1"), "mock:n2")
+        .add_hop(&PublicKey::of("n2"), "mock:target"),
     )
     .expect("Failed to send 3");
   println!("Sent messages! Running along pipeline...");

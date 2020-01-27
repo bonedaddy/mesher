@@ -69,7 +69,8 @@ pub fn assemble(
   for (chunk, key) in chunks.into_iter() {
     packet.push(chunk.encrypt(key));
   }
-  bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
+  bincode::serialize(&packet)
+    .map_err(|e| crate::TransportFail::Other(Box::new(e)))
 }
 
 pub fn disassemble(

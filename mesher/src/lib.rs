@@ -11,9 +11,9 @@ pub mod transports;
 
 use {
   crypto::{PublicKey, SecretKey},
-  transports::{Transport, TransportFail},
   rand::prelude::*,
   std::collections::HashMap,
+  transports::{Transport, TransportFail},
 };
 
 #[derive(Debug, Clone)]
@@ -32,10 +32,14 @@ impl Route {
       transports: Vec::new(),
     }
   }
-  pub fn with_transport(mut self, node_key: &crate::PublicKey, transport: &str) -> Route {
+  pub fn add_hop(
+    mut self,
+    node_key: &crate::PublicKey,
+    path: &str,
+  ) -> Route {
     self
       .transports
-      .push((transport.to_owned(), node_key.clone()));
+      .push((path.to_owned(), node_key.clone()));
     self
   }
 }
@@ -59,7 +63,10 @@ pub struct Mesher {
 }
 
 impl Mesher {
-  pub fn signed(own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
+  pub fn signed(
+    own_skeys: Vec<crate::SecretKey>,
+    _source_sigs: Vec<crate::PublicKey>,
+  ) -> Mesher {
     // TODO: outgoing packet signature setup
     Mesher::unsigned(own_skeys)
   }
