@@ -1,4 +1,5 @@
 // TODO: Replace with real crypto
+// (includes removing `PublicKey::of`/`SecretKey::of` or making them unsafe)
 
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8, String);
