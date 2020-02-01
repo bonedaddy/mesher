@@ -152,3 +152,5 @@ Some large, overarching tasks that need to be completed:
   - One block of tests for the mesher core
   - One per transport
   - One set of integration tests 
+- Figure out if `String` or `&str` is more appropriate for the public API.
+  - Am leaning towards `String`, because aside from the examples, hardcoded stuff seems rare...
