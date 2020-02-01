@@ -47,7 +47,7 @@ impl Transport for TCP {
               return;
             }
           }
-          Err(TryRecvError::Empty) => sleep(Duration::from_millis(1000)),
+          Err(TryRecvError::Empty) => sleep(Duration::from_millis(10)),
           Err(TryRecvError::Disconnected) => return,
         }
       }
