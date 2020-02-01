@@ -152,10 +152,4 @@ impl Mesher {
   }
 }
 
-pub mod prelude {
-  pub use crate::{
-    crypto::{PublicKey, SecretKey},
-    transports::{Transport, TransportFail},
-    Mesher, Route,
-  };
-}
+pub mod prelude;
