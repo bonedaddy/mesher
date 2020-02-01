@@ -42,7 +42,7 @@ impl Transport for TCP {
           Ok(Order::Tx(dest, data)) => println!("Would send {:?} to {:?}", dest, data),
           Ok(Order::Rx(on)) => {
             println!("Would listen on {:?}", on);
-            if let Err(_) = data_in.send(vec![1, 2, 3]) {
+            if let Err(_) = data_in.send(vec![2, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 194, 186, 200, 189, 85, 86, 20, 0, 0, 0, 0, 0, 0, 0, 238, 230, 244, 233, 130, 245, 228, 241, 187, 220, 187, 187, 178, 222, 187, 178, 185, 182, 181, 177]) {
               // means the other channel is disconnected, so this thread should die too
               return;
             }
