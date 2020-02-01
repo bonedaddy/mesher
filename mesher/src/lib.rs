@@ -92,7 +92,7 @@ impl Mesher {
       .splitn(2, ':')
       .next()
       .ok_or(transports::TransportFail::InvalidURL(
-        "no colon-delimited scheme segment",
+        "no colon-delimited scheme segment".to_string(),
       ))?
       .to_owned();
     self
