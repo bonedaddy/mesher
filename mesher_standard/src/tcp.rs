@@ -36,6 +36,9 @@ impl Transport for TCP {
     let (data_in, data_out) = channel();
 
     let thread_code = move || {
+      // TODO:
+      //  - Move this into its own function somehow
+      //  - Actually write the relevant TCP sending/listening code
       loop {
         match orders_out.try_recv() {
           Ok(Order::Quit) => return,
