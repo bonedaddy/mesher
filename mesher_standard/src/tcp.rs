@@ -9,13 +9,19 @@ use std::{
 
 enum Order {
   Quit,
-  Tx(IpAddr, Vec<u8>),
+  Tx(SocketAddr, Vec<u8>),
   Rx(SocketAddr),
 }
 
 // fn tcp_listen(orders: Receiver<Order>, data: Sender<Vec<u8>>) -> Box<dyn FnOnce() -> ()> {
 //   Box::new()
 // }
+
+fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, TransportFail> {
+  let (_, path) = path.split_at(scheme.len() + 1);
+  let get_path_fail = || TransportFail::InvalidURL(format!("not a valid socket address format: {}", path));
+  path.to_socket_addrs().map_err(|_| get_path_fail())?.next().ok_or(get_path_fail())
+}
 
 pub struct TCP {
   orders: Sender<Order>,
@@ -65,13 +71,12 @@ impl Transport for TCP {
   }
 
   fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
-    let ip = path.parse().map_err(|e| TransportFail::InvalidURL(format!("{:?}", e)))?;
-    self.orders.send(Order::Tx(ip, blob)).map_err(|_| TransportFail::SendFailure(format!("Failed to give TCP {}: data to sending thread", self.scheme)))
+    let sock = socket_addr_from_string(&self.scheme, path)?;
+    self.orders.send(Order::Tx(sock, blob)).map_err(|_| TransportFail::SendFailure(format!("Failed to give TCP {}: data to sending thread", self.scheme)))
   }
 
   fn listen(&mut self, path: String) -> Result<(), TransportFail> {
-    let get_path_fail = || TransportFail::InvalidURL(format!("not a valid socket address format: {}", path));
-    let sock = path.to_socket_addrs().map_err(|_| get_path_fail())?.next().ok_or(get_path_fail())?;
+    let sock = socket_addr_from_string(&self.scheme, path)?;
     self.orders.send(Order::Rx(sock)).map_err(|_| TransportFail::ListenFailure(format!("Failed to give TCP {}: address to listening thread", self.scheme)))
   }
 
