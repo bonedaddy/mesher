@@ -3,7 +3,7 @@ use mesher::prelude::*;
 use std::{
   io::prelude::*,
   net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs},
-  sync::mpsc::{channel, Receiver},
+  sync::mpsc::{channel, Sender, Receiver},
   thread::Builder,
 };
 
@@ -25,57 +25,52 @@ fn socket_addr_from_string(
     .ok_or_else(get_path_fail)
 }
 
-struct Listener {
-  data: Receiver<Vec<u8>>,
-}
+fn listen(scheme: &str, addr: SocketAddr, sender: Sender<Vec<u8>>) -> Result<(), TransportFail> {
+  let tcp_listen = TcpListener::bind(addr).map_err(|e| {
+    TransportFail::ListenFailure(format!("Failed to bind listener: {:?}", e))
+  })?;
 
-impl Listener {
-  fn new(scheme: &str, addr: SocketAddr) -> Result<Listener, TransportFail> {
-    let (data_in, data_out) = channel();
-    let tcp_listen = TcpListener::bind(addr).map_err(|e| {
-      TransportFail::ListenFailure(format!("Failed to bind listener: {:?}", e))
+  let thread_code = move || {
+    for conn in tcp_listen.incoming() {
+      let mut conn = match conn {
+        Ok(c) => c,
+        Err(_) => continue,
+      };
+      let mut bytes = vec![];
+      if conn.read_to_end(&mut bytes).is_err() {
+        continue;
+      }
+      if sender.send(bytes).is_err() {
+        return;
+      }
+    }
+  };
+
+  Builder::new()
+    .name(format!("TCP {}:{} listener", scheme, addr))
+    .spawn(thread_code)
+    .map_err(|e| {
+      TransportFail::SetupFailure(format!(
+        "Faield to start TCP {}: listener: {:?}",
+        scheme, e
+      ))
     })?;
 
-    let thread_code = move || {
-      for conn in tcp_listen.incoming() {
-        let mut conn = match conn {
-          Ok(c) => c,
-          Err(_) => continue,
-        };
-        let mut bytes = vec![];
-        if conn.read_to_end(&mut bytes).is_err() {
-          continue;
-        }
-        if data_in.send(bytes).is_err() {
-          return;
-        }
-      }
-    };
-
-    Builder::new()
-      .name(format!("TCP {}:{} listener", scheme, addr))
-      .spawn(thread_code)
-      .map_err(|e| {
-        TransportFail::SetupFailure(format!(
-          "Faield to start TCP {}: listener: {:?}",
-          scheme, e
-        ))
-      })?;
-
-    Ok(Listener { data: data_out })
-  }
+  Ok(())
 }
 
 pub struct TCP {
-  listeners: Vec<Listener>,
+  sender: Sender<Vec<u8>>,
+  receiver: Receiver<Vec<u8>>,
   scheme: String,
 }
 
 impl Transport for TCP {
   fn new(scheme: &str) -> Result<Self, TransportFail> {
+    let (sender, receiver) = channel();
     Ok(TCP {
       scheme: scheme.to_string(),
-      listeners: vec![],
+      sender, receiver,
     })
   }
 
@@ -95,17 +90,11 @@ impl Transport for TCP {
 
   fn listen(&mut self, path: String) -> Result<(), TransportFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
-    self.listeners.push(Listener::new(&self.scheme, sock)?);
+    listen(&self.scheme, sock, self.sender.clone())?;
     Ok(())
   }
 
   fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail> {
-    let mut received = vec![];
-    for listener in self.listeners.iter() {
-      while let Ok(v) = listener.data.try_recv() {
-        received.push(v);
-      }
-    }
-    Ok(received)
+    Ok(self.receiver.try_iter().collect())
   }
 }
