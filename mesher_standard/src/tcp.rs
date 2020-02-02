@@ -64,7 +64,7 @@ impl Transport for TCP {
   fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
     let mut out = TcpStream::connect(sock)
-      .map_err(|e| TransportFail::SendFailure(format!("Faield to establish TCP connection: {:?}", e)))?;
+      .map_err(|e| TransportFail::SendFailure(format!("Failed to establish TCP connection: {:?}", e)))?;
     out
       .write_all(&blob)
       .map_err(|e| TransportFail::SendFailure(format!("Failed to send data: {:?}", e)))?;
