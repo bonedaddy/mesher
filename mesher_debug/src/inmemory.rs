@@ -3,8 +3,7 @@ use std::{collections::HashMap, sync::Mutex};
 use mesher::prelude::*;
 
 lazy_static! {
-  static ref PACKETS: Mutex<HashMap<String, Vec<Vec<u8>>>> =
-    Mutex::new(HashMap::new());
+  static ref PACKETS: Mutex<HashMap<String, Vec<Vec<u8>>>> = Mutex::new(HashMap::new());
 }
 
 #[allow(dead_code)]

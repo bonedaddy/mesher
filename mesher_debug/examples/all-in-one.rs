@@ -4,8 +4,7 @@ fn make_mesher(name: &str) -> Mesher {
   let mut m = Mesher::unsigned(vec![SecretKey::of(name)]);
   m.add_transport::<mesher_debug::InMemory>("mock")
     .expect("failed to add mock");
-  m.listen_on(&format!("mock:{}", name))
-    .expect("failed to listen");
+  m.listen_on(&format!("mock:{}", name)).expect("failed to listen");
   m
 }
 
@@ -20,8 +19,7 @@ fn main() {
   m_n1
     .send(
       &[2],
-      Route::to(&PublicKey::of("target"), "mock:n2")
-        .add_hop(&PublicKey::of("n2"), "mock:target"),
+      Route::to(&PublicKey::of("target"), "mock:n2").add_hop(&PublicKey::of("n2"), "mock:target"),
     )
     .expect("Failed to send 2");
   m_root

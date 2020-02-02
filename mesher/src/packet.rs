@@ -69,20 +69,11 @@ pub fn assemble(
   for (chunk, key) in chunks.into_iter() {
     packet.push(chunk.encrypt(key));
   }
-  bincode::serialize(&packet)
-    .map_err(|e| crate::TransportFail::Other(Box::new(e)))
+  bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
 }
 
-pub fn disassemble(
-  packet: &[u8],
-  keys: &[crate::SecretKey],
-) -> Result<Vec<Chunk>, crate::transports::TransportFail> {
+pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::transports::TransportFail> {
   bincode::deserialize::<Vec<Vec<u8>>>(packet)
-    .map(|packet| {
-      packet
-        .into_iter()
-        .map(|c| Chunk::decrypt(c, keys))
-        .collect()
-    })
+    .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
     .map_err(|_| crate::TransportFail::InvalidPacket)
 }

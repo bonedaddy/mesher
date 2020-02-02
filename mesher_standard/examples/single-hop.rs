@@ -5,17 +5,14 @@ use std::{thread::sleep, time::Duration};
 
 fn make_sender() -> Mesher {
   let mut m = Mesher::unsigned(vec![SecretKey::of("sender")]);
-  m.add_transport::<TCP>("tcp")
-    .expect("Failed to add transport");
+  m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m
 }
 
 fn make_receiver() -> Mesher {
   let mut m = Mesher::unsigned(vec![SecretKey::of("receiver")]);
-  m.add_transport::<TCP>("tcp")
-    .expect("Failed to add transport");
-  m.listen_on("tcp:[::1]:18540")
-    .expect("Failed to listen on port");
+  m.add_transport::<TCP>("tcp").expect("Failed to add transport");
+  m.listen_on("tcp:[::1]:18540").expect("Failed to listen on port");
   m
 }
 
@@ -27,8 +24,7 @@ fn main() {
   let path = Route::to(&PublicKey::of("receiver"), "tcp:[::1]:18540");
 
   for message in MESSAGES {
-    m1.send(message.as_bytes(), path.clone())
-      .expect("Failed to send");
+    m1.send(message.as_bytes(), path.clone()).expect("Failed to send");
     println!("Message sent: {}", message);
   }
 
@@ -41,8 +37,7 @@ fn main() {
     } else {
       to_read -= recvd.len();
       for msg in recvd {
-        let contents =
-          std::str::from_utf8(msg.contents()).expect("Invalid UTF-8");
+        let contents = std::str::from_utf8(msg.contents()).expect("Invalid UTF-8");
         println!("Message received: {}", contents);
       }
       if to_read == 0 {

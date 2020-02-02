@@ -15,12 +15,7 @@ impl Transport for Printer {
   }
 
   fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
-    println!(
-      "Printer {} sent {} bytes to {}. In hex:",
-      self.scheme,
-      path,
-      blob.len()
-    );
+    println!("Printer {} sent {} bytes to {}. In hex:", self.scheme, path, blob.len());
     // most of the message
     for s in 0..blob.len() / 16 {
       let bytes = blob[s..s + 16].iter().map(|b| format!("{:x}", b)).join("");
@@ -30,10 +25,7 @@ impl Transport for Printer {
     let overhang = blob.len() % 16;
     if overhang > 0 {
       let oh_start = blob.len() - overhang;
-      let bytes = blob[oh_start..]
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .join("");
+      let bytes = blob[oh_start..].iter().map(|b| format!("{:02x}", b)).join("");
       println!("{:4x}: {}", oh_start, bytes);
     }
     Ok(())

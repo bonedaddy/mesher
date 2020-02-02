@@ -57,10 +57,7 @@ pub struct Mesher {
 }
 
 impl Mesher {
-  pub fn signed(
-    own_skeys: Vec<crate::SecretKey>,
-    _source_sigs: Vec<crate::PublicKey>,
-  ) -> Mesher {
+  pub fn signed(own_skeys: Vec<crate::SecretKey>, _source_sigs: Vec<crate::PublicKey>) -> Mesher {
     // TODO: outgoing packet signature setup
     Mesher::unsigned(own_skeys)
   }
@@ -73,27 +70,17 @@ impl Mesher {
     }
   }
 
-  pub fn add_transport<T: Transport + 'static>(
-    &mut self,
-    scheme: &str,
-  ) -> Result<(), TransportFail> {
-    self
-      .transports
-      .insert(scheme.to_owned(), Box::new(T::new(scheme)?));
+  pub fn add_transport<T: Transport + 'static>(&mut self, scheme: &str) -> Result<(), TransportFail> {
+    self.transports.insert(scheme.to_owned(), Box::new(T::new(scheme)?));
     Ok(())
   }
 
   #[allow(clippy::borrowed_box)]
-  fn get_transport_for_path(
-    &mut self,
-    path: &str,
-  ) -> Result<&mut Box<dyn Transport>, TransportFail> {
+  fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, TransportFail> {
     let scheme = path
       .splitn(2, ':')
       .next()
-      .ok_or_else(|| transports::TransportFail::InvalidURL(
-        "no colon-delimited scheme segment".to_string(),
-      ))?
+      .ok_or_else(|| transports::TransportFail::InvalidURL("no colon-delimited scheme segment".to_string()))?
       .to_owned();
     self
       .transports
@@ -120,7 +107,7 @@ impl Mesher {
       match piece {
         packet::Chunk::Message(m) => messages.push(Message { contents: m }),
         packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
-        packet::Chunk::Encrypted(_) => () /* piece not meant for us */,
+        packet::Chunk::Encrypted(_) => (), /* piece not meant for us */
       }
     }
     Ok(messages)
