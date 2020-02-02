@@ -29,7 +29,9 @@ impl Listener {
           Err(_) => continue,
         };
         let mut bytes = vec![];
-        let _ = conn.read_to_end(&mut bytes);
+        if let Err(_) = conn.read_to_end(&mut bytes) {
+          continue;
+        }
         if let Err(_) = data_in.send(bytes) {
           return;
         }
