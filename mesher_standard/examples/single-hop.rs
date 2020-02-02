@@ -16,9 +16,9 @@ fn make_receiver() -> (Mesher, Route) {
   (m, Route::to(&PublicKey::of("receiver"), "tcp:[::1]:18540"))
 }
 
-const MESSAGES: &[&[u8]] = &[
-  &[1],
-  &[2],
+const MESSAGES: &[&str] = &[
+  "Hello",
+  "Goodbye",
 ];
 
 fn main() {
@@ -26,20 +26,21 @@ fn main() {
   let (mut m2, path) = make_receiver();
 
   for message in MESSAGES {
-    m1.send(message, path.clone()).expect("Failed to send");
-    println!("Message sent: {:?}", message);
+    m1.send(message.as_bytes(), path.clone()).expect("Failed to send");
+    println!("Message sent: {}", message);
     loop {
-      sleep(Duration::from_millis(500));
       let recvd = m2.recv().expect("Failed to recv");
-      if recvd.len() == 0 {
-        println!("No message gotten yet...");
-        continue;
-      }  
-      println!("received {} messages", recvd.len());
-      for msg in recvd {
-        println!("- {:?}", msg);
+      match recvd.first() {
+        Some(s) => {
+          let contents = std::str::from_utf8(s.contents()).expect("Invalid UTF-8");
+          println!("Message received: {}", contents);
+          break;
+        }
+        None => {
+          println!("No message gotten yet...");
+          sleep(Duration::from_millis(10));
+        }
       }
-      break;
     }
   }
 }
