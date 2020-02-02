@@ -154,3 +154,9 @@ Some large, overarching tasks that need to be completed:
   - One set of integration tests 
 - Figure out if `String` or `&str` is more appropriate for the public API.
   - Am leaning towards `String`, because aside from the examples, hardcoded stuff seems rare...
+- Update the ERADME
+  - Project structure has changed
+  - Type structure is largely the same but still needs description
+- Move mesher_node into its own crate
+  - Doesn't really make sense for it to be in the same crate as the library
+
