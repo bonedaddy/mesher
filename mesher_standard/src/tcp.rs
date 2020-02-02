@@ -1,21 +1,11 @@
 use mesher::prelude::*;
 
 use std::{
-  net::{IpAddr, SocketAddr, ToSocketAddrs},
-  sync::mpsc::{channel, Receiver, Sender, TryRecvError},
-  thread::{sleep, Builder, JoinHandle},
-  time::Duration,
+  net::{SocketAddr, ToSocketAddrs, TcpListener, TcpStream},
+  sync::mpsc::{channel, Receiver},
+  thread::Builder,
+  io::prelude::*,
 };
-
-enum Order {
-  Quit,
-  Tx(SocketAddr, Vec<u8>),
-  Rx(SocketAddr),
-}
-
-// fn tcp_listen(orders: Receiver<Order>, data: Sender<Vec<u8>>) -> Box<dyn FnOnce() -> ()> {
-//   Box::new()
-// }
 
 fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, TransportFail> {
   let (_, path) = path.split_at(scheme.len() + 1);
@@ -23,41 +13,31 @@ fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, Tra
   path.to_socket_addrs().map_err(|_| get_path_fail())?.next().ok_or(get_path_fail())
 }
 
-pub struct TCP {
-  orders: Sender<Order>,
+struct Listener {
   data: Receiver<Vec<u8>>,
-  scheme: String,
-  listener_thread: JoinHandle<()>,
 }
 
-impl Transport for TCP {
-  fn new(scheme: &str) -> Result<Self, TransportFail> {
-    let (orders_in, orders_out) = channel();
+impl Listener {
+  fn new(scheme: &str, addr: SocketAddr) -> Result<Listener, TransportFail> {
     let (data_in, data_out) = channel();
+    let tcp_listen = TcpListener::bind(addr).map_err(|e| TransportFail::ListenFailure(format!("Failed to bind listener: {:?}", e)))?;
 
     let thread_code = move || {
-      // TODO:
-      //  - Move this into its own function somehow
-      //  - Actually write the relevant TCP sending/listening code
-      loop {
-        match orders_out.try_recv() {
-          Ok(Order::Quit) => return,
-          Ok(Order::Tx(dest, data)) => println!("Would send {:?} to {:?}", dest, data),
-          Ok(Order::Rx(on)) => {
-            println!("Would listen on {:?}", on);
-            if let Err(_) = data_in.send(vec![2, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 194, 186, 200, 189, 85, 86, 20, 0, 0, 0, 0, 0, 0, 0, 238, 230, 244, 233, 130, 245, 228, 241, 187, 220, 187, 187, 178, 222, 187, 178, 185, 182, 181, 177]) {
-              // means the other channel is disconnected, so this thread should die too
-              return;
-            }
-          }
-          Err(TryRecvError::Empty) => sleep(Duration::from_millis(10)),
-          Err(TryRecvError::Disconnected) => return,
+      for conn in tcp_listen.incoming() {
+        let mut conn = match conn {
+          Ok(c) => c,
+          Err(_) => continue,
+        };
+        let mut bytes = vec![];
+        let _ = conn.read_to_end(&mut bytes);
+        if let Err(_) = data_in.send(bytes) {
+          return;
         }
       }
     };
 
-    let thread = Builder::new()
-      .name(format!("TCP {}: listener", scheme))
+    Builder::new()
+      .name(format!("TCP {}:{} listener", scheme, addr))
       .spawn(thread_code)
       .map_err(|e| {
         TransportFail::SetupFailure(format!(
@@ -65,46 +45,44 @@ impl Transport for TCP {
           scheme, e
         ))
       })?;
+
+    Ok(Listener { data: data_out })
+  }
+}
+
+pub struct TCP {
+  listeners: Vec<Listener>,
+  scheme: String,
+}
+
+impl Transport for TCP {
+  fn new(scheme: &str) -> Result<Self, TransportFail> {
     Ok(TCP {
       scheme: scheme.to_string(),
-      orders: orders_in,
-      data: data_out,
-      listener_thread: thread,
+      listeners: vec![],
     })
   }
 
   fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
-    self.orders.send(Order::Tx(sock, blob)).map_err(|_| TransportFail::SendFailure(format!("Failed to give TCP {}: data to sending thread", self.scheme)))
+    let mut out = TcpStream::connect(sock).map_err(|e| TransportFail::SendFailure(format!("Faield to establish TCP connection: {:?}", e)))?;
+    out.write_all(&blob).map_err(|e| TransportFail::SendFailure(format!("Failed to send data: {:?}", e)))?;
+    Ok(())
   }
 
   fn listen(&mut self, path: String) -> Result<(), TransportFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
-    self.orders.send(Order::Rx(sock)).map_err(|_| TransportFail::ListenFailure(format!("Failed to give TCP {}: address to listening thread", self.scheme)))
+    self.listeners.push(Listener::new(&self.scheme, sock)?);
+    Ok(())
   }
 
   fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail> {
     let mut received = vec![];
-    loop {
-      match self.data.try_recv() {
-        Ok(d) => received.push(d),
-        Err(TryRecvError::Empty) => break,
-        Err(TryRecvError::Disconnected) => return Err(TransportFail::ReceiveFailure(format!("TCP {}: listener disconnected (did the thread die?)", self.scheme))),
+    for listener in self.listeners.iter() {
+      while let Ok(v) = listener.data.try_recv() {
+        received.push(v);
       }
     }
     Ok(received)
-  }
-}
-
-impl Drop for TCP {
-  fn drop(&mut self) {
-    loop {
-      match self.orders.send(Order::Quit) {
-        Ok(_) => (),     // other side still alive
-        Err(_) => break, // other side dead now
-      }
-      // don't spinlock so we don't burn CPU.
-      sleep(Duration::from_millis(50));
-    }
   }
 }
