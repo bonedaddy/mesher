@@ -91,7 +91,7 @@ impl Mesher {
     let scheme = path
       .splitn(2, ':')
       .next()
-      .ok_or(transports::TransportFail::InvalidURL(
+      .ok_or_else(|| transports::TransportFail::InvalidURL(
         "no colon-delimited scheme segment".to_string(),
       ))?
       .to_owned();
@@ -120,7 +120,7 @@ impl Mesher {
       match piece {
         packet::Chunk::Message(m) => messages.push(Message { contents: m }),
         packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
-        packet::Chunk::Encrypted(_) => (/* piece not meant for us */),
+        packet::Chunk::Encrypted(_) => () /* piece not meant for us */,
       }
     }
     Ok(messages)

@@ -22,7 +22,7 @@ fn socket_addr_from_string(
     .to_socket_addrs()
     .map_err(|_| get_path_fail())?
     .next()
-    .ok_or(get_path_fail())
+    .ok_or_else(get_path_fail)
 }
 
 struct Listener {
@@ -43,10 +43,10 @@ impl Listener {
           Err(_) => continue,
         };
         let mut bytes = vec![];
-        if let Err(_) = conn.read_to_end(&mut bytes) {
+        if conn.read_to_end(&mut bytes).is_err() {
           continue;
         }
-        if let Err(_) = data_in.send(bytes) {
+        if data_in.send(bytes).is_err() {
           return;
         }
       }

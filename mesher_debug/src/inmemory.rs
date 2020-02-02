@@ -42,7 +42,7 @@ impl Transport for InMemory {
         .flat_map(|path| {
           packets
             .insert(path.clone(), vec![])
-            .unwrap_or(vec![])
+            .unwrap_or_else(|| vec![])
             .into_iter()
         })
         .collect(),
