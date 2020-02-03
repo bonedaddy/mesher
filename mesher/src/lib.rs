@@ -18,29 +18,6 @@ use {
 
 use prelude::*;
 
-#[derive(Debug, Clone)]
-pub struct Route {
-  target: crate::PublicKey,
-  first_hop: String,
-  transports: Vec<(String, crate::PublicKey)>,
-  // TODO: Replies
-}
-
-impl Route {
-  pub fn to(target_key: &crate::PublicKey, first_hop: &str) -> Route {
-    Route {
-      target: target_key.clone(),
-      first_hop: first_hop.to_owned(),
-      transports: Vec::new(),
-    }
-  }
-  
-  pub fn add_hop(mut self, node_key: &crate::PublicKey, path: &str) -> Route {
-    self.transports.push((path.to_owned(), node_key.clone()));
-    self
-  }
-}
-
 #[derive(Debug)]
 pub struct Message {
   contents: Vec<u8>,
@@ -116,7 +93,7 @@ impl Mesher {
     Ok(messages)
   }
 
-  pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
+  pub fn send(&mut self, message: &[u8], route: packet::SimpleRoute) -> fail::Result<()> {
     let assembled = packet::Packet::along_route(message, route, self.random_key()?).into_bytes()?;
     self.process_packet(assembled)?;
     Ok(())

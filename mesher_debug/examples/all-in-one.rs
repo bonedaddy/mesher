@@ -14,18 +14,18 @@ fn main() {
   let m_n2 = make_mesher("n2");
   let m_target = make_mesher("target");
   m_root
-    .send(&[1], Route::to(&PublicKey::of("n2"), "mock:n2"))
+    .send(&[1], SimpleRoute::to(&PublicKey::of("n2"), "mock:n2"))
     .expect("Failed to send 1");
   m_n1
     .send(
       &[2],
-      Route::to(&PublicKey::of("target"), "mock:n2").add_hop(&PublicKey::of("n2"), "mock:target"),
+      SimpleRoute::to(&PublicKey::of("target"), "mock:n2").add_hop(&PublicKey::of("n2"), "mock:target"),
     )
     .expect("Failed to send 2");
   m_root
     .send(
       &[3],
-      Route::to(&PublicKey::of("target"), "mock:n1")
+      SimpleRoute::to(&PublicKey::of("target"), "mock:n1")
         .add_hop(&PublicKey::of("n1"), "mock:n2")
         .add_hop(&PublicKey::of("n2"), "mock:target"),
     )

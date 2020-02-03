@@ -21,7 +21,7 @@ const MESSAGES: &[&str] = &["Hello", "This is a TCP demo", "Goodbye"];
 fn main() {
   let mut m1 = make_sender();
   let mut m2 = make_receiver();
-  let path = Route::to(&PublicKey::of("receiver"), "tcp:[::1]:18540");
+  let path = SimpleRoute::to(&PublicKey::of("receiver"), "tcp:[::1]:18540");
 
   for message in MESSAGES {
     m1.send(message.as_bytes(), path.clone()).expect("Failed to send");

@@ -1,3 +1,26 @@
+#[derive(Debug, Clone)]
+pub struct SimpleRoute {
+  target: crate::PublicKey,
+  first_hop: String,
+  transports: Vec<(String, crate::PublicKey)>,
+  // TODO: Replies
+}
+
+impl SimpleRoute {
+  pub fn to(target_key: &crate::PublicKey, first_hop: &str) -> SimpleRoute {
+    SimpleRoute {
+      target: target_key.clone(),
+      first_hop: first_hop.to_owned(),
+      transports: Vec::new(),
+    }
+  }
+  
+  pub fn add_hop(mut self, node_key: &crate::PublicKey, path: &str) -> SimpleRoute {
+    self.transports.push((path.to_owned(), node_key.clone()));
+    self
+  }
+}
+
 const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 
 #[derive(Debug)]
@@ -61,7 +84,7 @@ impl Packet {
     Packet { chunks: vec![] }
   }
 
-  pub(crate) fn along_route(message: &[u8], route: crate::Route, self_pkey: &crate::PublicKey) -> Packet {
+  pub(crate) fn along_route(message: &[u8], route: SimpleRoute, self_pkey: &crate::PublicKey) -> Packet {
     let mut this = Packet::new().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
     for (transport, key) in route.transports {
       this = this.add_hop(transport, &key);

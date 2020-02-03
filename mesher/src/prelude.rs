@@ -4,5 +4,5 @@
 pub use crate::{
   crypto::{PublicKey, SecretKey},
   transports::{Transport, TransportFail},
-  Mesher, Route,
+  Mesher, packet::SimpleRoute,
 };

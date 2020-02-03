@@ -18,7 +18,7 @@ fn main() {
   println!("\n---\nSending {} bytes...", data.len());
   let mut m = Mesher::unsigned(vec![SecretKey::of("who cares")]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
-  m.send(&data, Route::to(&PublicKey::of("receiver"), &format!("tcp:{}", sock)))
+  m.send(&data, SimpleRoute::to(&PublicKey::of("receiver"), &format!("tcp:{}", sock)))
     .expect("Failed to send data");
   println!("Sent! Did you see it get received?");
 }

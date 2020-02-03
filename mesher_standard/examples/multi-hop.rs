@@ -30,7 +30,7 @@ fn main() {
   let mut mb = make_bouncer();
   let mut m2 = make_receiver();
   let path =
-    Route::to(&PublicKey::of("receiver"), "tcp:[::1]:18550").add_hop(&PublicKey::of("bouncer"), "tcp:[::1]:18540");
+    SimpleRoute::to(&PublicKey::of("receiver"), "tcp:[::1]:18550").add_hop(&PublicKey::of("bouncer"), "tcp:[::1]:18540");
 
   for message in MESSAGES {
     m1.send(message.as_bytes(), path.clone()).expect("Failed to send");
