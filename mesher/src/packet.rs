@@ -52,28 +52,41 @@ impl Chunk {
   }
 }
 
-pub fn assemble(
-  message: &[u8],
-  route: crate::Route,
-  own_pkey: crate::PublicKey,
-) -> Result<Vec<u8>, crate::transports::TransportFail> {
-  let mut chunks = vec![
-    (Chunk::Message(message.to_vec()), route.target.clone()),
-    (Chunk::Transport(route.first_hop), own_pkey),
-  ];
-  for (transport, key) in route.transports {
-    chunks.push((Chunk::Transport(transport), key));
-  }
-
-  let mut packet = vec![];
-  for (chunk, key) in chunks.into_iter() {
-    packet.push(chunk.encrypt(key));
-  }
-  bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
+pub struct Packet {
+  chunks: Vec<(Chunk, crate::PublicKey)>,
 }
 
-pub fn disassemble(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::transports::TransportFail> {
-  bincode::deserialize::<Vec<Vec<u8>>>(packet)
+impl Packet {
+  pub fn new() -> Packet {
+    Packet { chunks: vec![] }
+  }
+
+  pub(crate) fn along_route(message: &[u8], route: crate::Route, self_pkey: &crate::PublicKey) -> Packet {
+    let mut this = Packet::new().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
+    for (transport, key) in route.transports {
+      this = this.add_hop(transport, &key);
+    }
+    this
+  }
+
+  pub fn add_message(mut self, data: &[u8], target_pkey: &crate::PublicKey) -> Packet {
+    self.chunks.push((Chunk::Message(data.to_vec()), target_pkey.clone()));
+    self
+  }
+
+  pub fn add_hop(mut self, path: String, node_pkey: &crate::PublicKey) -> Packet {
+    self.chunks.push((Chunk::Transport(path), node_pkey.clone()));
+    self
+  }
+
+  pub fn into_bytes(self) -> Result<Vec<u8>, crate::TransportFail> {
+    let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
+    bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
+  }
+
+  pub fn from_bytes(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::TransportFail> {
+    bincode::deserialize::<Vec<Vec<u8>>>(packet)
     .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
     .map_err(|_| crate::TransportFail::InvalidPacket)
+  }
 }

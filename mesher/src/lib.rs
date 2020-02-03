@@ -9,12 +9,14 @@ mod fail;
 mod packet;
 pub mod transports;
 
+pub mod prelude;
+
 use {
-  crypto::{PublicKey, SecretKey},
   rand::prelude::*,
   std::collections::HashMap,
-  transports::{Transport, TransportFail},
 };
+
+use prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Route {
@@ -32,6 +34,7 @@ impl Route {
       transports: Vec::new(),
     }
   }
+  
   pub fn add_hop(mut self, node_key: &crate::PublicKey, path: &str) -> Route {
     self.transports.push((path.to_owned(), node_key.clone()));
     self
@@ -92,16 +95,16 @@ impl Mesher {
     self.get_transport_for_path(path)?.listen(path.to_owned())
   }
 
-  fn random_key(&mut self) -> fail::Result<PublicKey> {
+  fn random_key(&mut self) -> fail::Result<&PublicKey> {
     self
       .own_pkeys
       .choose(&mut self.rng)
-      .map(Clone::clone)
+      // .map(Clone::clone)
       .ok_or(fail::Fail::NoKeys)
   }
 
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
-    let dis = packet::disassemble(&pkt, &self.own_skeys)?;
+    let dis = packet::Packet::from_bytes(&pkt, &self.own_skeys)?;
     let mut messages = vec![];
     for piece in dis {
       match piece {
@@ -114,7 +117,7 @@ impl Mesher {
   }
 
   pub fn send(&mut self, message: &[u8], route: Route) -> fail::Result<()> {
-    let assembled = packet::assemble(message, route, self.random_key()?)?;
+    let assembled = packet::Packet::along_route(message, route, self.random_key()?).into_bytes()?;
     self.process_packet(assembled)?;
     Ok(())
   }
@@ -138,5 +141,3 @@ impl Mesher {
     Ok(messages)
   }
 }
-
-pub mod prelude;
