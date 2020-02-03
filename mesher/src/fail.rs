@@ -1,5 +1,7 @@
 // TODO Merge this and transports::TransportFail?
 
+use crate::prelude::*;
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Fail {
@@ -8,11 +10,11 @@ pub enum Fail {
 
   NotYetImplemented(&'static str),
 
-  TransportFail(crate::TransportFail),
+  TransportFail(TransportFail),
 }
 
-impl From<crate::TransportFail> for Fail {
-  fn from(t: crate::TransportFail) -> Fail {
+impl From<TransportFail> for Fail {
+  fn from(t: TransportFail) -> Fail {
     Fail::TransportFail(t)
   }
 }

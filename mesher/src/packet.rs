@@ -1,13 +1,15 @@
+use crate::prelude::*;
+
 #[derive(Debug, Clone)]
 pub struct SimpleRoute {
-  target: crate::PublicKey,
+  target: PublicKey,
   first_hop: String,
-  transports: Vec<(String, crate::PublicKey)>,
+  transports: Vec<(String, PublicKey)>,
   // TODO: Replies
 }
 
 impl SimpleRoute {
-  pub fn to(target_key: &crate::PublicKey, first_hop: &str) -> SimpleRoute {
+  pub fn to(target_key: &PublicKey, first_hop: &str) -> SimpleRoute {
     SimpleRoute {
       target: target_key.clone(),
       first_hop: first_hop.to_owned(),
@@ -15,7 +17,7 @@ impl SimpleRoute {
     }
   }
   
-  pub fn add_hop(mut self, node_key: &crate::PublicKey, path: &str) -> SimpleRoute {
+  pub fn add_hop(mut self, node_key: &PublicKey, path: &str) -> SimpleRoute {
     self.transports.push((path.to_owned(), node_key.clone()));
     self
   }
@@ -33,7 +35,7 @@ pub enum Chunk {
 
 // TODO: real crypto
 impl Chunk {
-  fn encrypt(self, key: crate::PublicKey) -> Vec<u8> {
+  fn encrypt(self, key: PublicKey) -> Vec<u8> {
     let mut b = MAGIC.to_vec();
     let raw = match self {
       Chunk::Message(mut m) => {
@@ -51,7 +53,7 @@ impl Chunk {
     key.encrypt(&raw)
   }
 
-  fn decrypt_onekey(bytes: &[u8], key: &crate::SecretKey) -> Result<Chunk, ()> {
+  fn decrypt_onekey(bytes: &[u8], key: &SecretKey) -> Result<Chunk, ()> {
     let mut attempt_dec = key.decrypt(bytes)?;
     if attempt_dec.len() < 5 || &attempt_dec[0..4] != MAGIC {
       return Err(());
@@ -65,7 +67,7 @@ impl Chunk {
     }
   }
 
-  fn decrypt(bytes: Vec<u8>, keys: &[crate::SecretKey]) -> Chunk {
+  fn decrypt(bytes: Vec<u8>, keys: &[SecretKey]) -> Chunk {
     for key in keys {
       if let Ok(dec) = Self::decrypt_onekey(&bytes, key) {
         return dec;
@@ -76,7 +78,7 @@ impl Chunk {
 }
 
 pub struct Packet {
-  chunks: Vec<(Chunk, crate::PublicKey)>,
+  chunks: Vec<(Chunk, PublicKey)>,
 }
 
 impl Packet {
@@ -84,7 +86,7 @@ impl Packet {
     Packet { chunks: vec![] }
   }
 
-  pub(crate) fn along_route(message: &[u8], route: SimpleRoute, self_pkey: &crate::PublicKey) -> Packet {
+  pub(crate) fn along_route(message: &[u8], route: SimpleRoute, self_pkey: &PublicKey) -> Packet {
     let mut this = Packet::new().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
     for (transport, key) in route.transports {
       this = this.add_hop(transport, &key);
@@ -92,24 +94,24 @@ impl Packet {
     this
   }
 
-  pub fn add_message(mut self, data: &[u8], target_pkey: &crate::PublicKey) -> Packet {
+  pub fn add_message(mut self, data: &[u8], target_pkey: &PublicKey) -> Packet {
     self.chunks.push((Chunk::Message(data.to_vec()), target_pkey.clone()));
     self
   }
 
-  pub fn add_hop(mut self, path: String, node_pkey: &crate::PublicKey) -> Packet {
+  pub fn add_hop(mut self, path: String, node_pkey: &PublicKey) -> Packet {
     self.chunks.push((Chunk::Transport(path), node_pkey.clone()));
     self
   }
 
-  pub fn into_bytes(self) -> Result<Vec<u8>, crate::TransportFail> {
+  pub fn into_bytes(self) -> Result<Vec<u8>, TransportFail> {
     let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
-    bincode::serialize(&packet).map_err(|e| crate::TransportFail::Other(Box::new(e)))
+    bincode::serialize(&packet).map_err(|e| TransportFail::Other(Box::new(e)))
   }
 
-  pub fn from_bytes(packet: &[u8], keys: &[crate::SecretKey]) -> Result<Vec<Chunk>, crate::TransportFail> {
+  pub fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, TransportFail> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
     .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
-    .map_err(|_| crate::TransportFail::InvalidPacket)
+    .map_err(|_| TransportFail::InvalidPacket)
   }
 }
