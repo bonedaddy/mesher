@@ -3,15 +3,14 @@ use mesher_standard::TCP;
 
 fn main() {
   let mut args = std::env::args().skip(1);
-  let sock = args
-    .next()
-    .unwrap_or("[::1]:18540".to_owned());
+  let sock = args.next().unwrap_or("[::1]:18540".to_owned());
 
   println!("Listening for data on {}", sock);
 
   let mut m = Mesher::unsigned(vec![SecretKey::of("receiver")]);
   m.add_transport::<TCP>("tcp").expect("Failed to add required transport");
-  m.listen_on(&format!("tcp:{}", sock)).expect("Failed to add listener for messages");
+  m.listen_on(&format!("tcp:{}", sock))
+    .expect("Failed to add listener for messages");
 
   loop {
     let recvd = m.recv().expect("Failed to receive messages");
@@ -32,6 +31,7 @@ fn main() {
           }
         }
       };
+      println!("---");
     }
     std::thread::sleep(std::time::Duration::from_millis(100));
   }
