@@ -2,10 +2,6 @@
 
 #![allow(clippy::missing_safety_doc)]
 
-#[cfg(feature = "debug")]
-#[macro_use]
-extern crate lazy_static;
-
 pub mod crypto;
 pub mod packet;
 pub mod transports;
