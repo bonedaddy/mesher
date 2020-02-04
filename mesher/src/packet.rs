@@ -26,7 +26,7 @@ impl SimpleRoute {
 const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 
 #[derive(Debug)]
-pub enum Chunk {
+pub(crate) enum Chunk {
   Message(Vec<u8>),
   Transport(String),
   // Reply(...),
@@ -83,12 +83,12 @@ pub struct Packet {
 }
 
 impl Packet {
-  pub(crate) fn along_route(message: &[u8], route: SimpleRoute, self_pkey: &PublicKey) -> Packet {
-    let mut this = Packet::default().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
+  pub(crate) fn along_route(message: &[u8], route: SimpleRoute) -> (Packet, String) {
+    let mut this = Packet::default().add_message(message, &route.target)/*.add_hop(route.first_hop, self_pkey)*/;
     for (transport, key) in route.transports {
       this = this.add_hop(transport, &key);
     }
-    this
+    (this, route.first_hop)
   }
 
   pub fn add_message(mut self, data: &[u8], target_pkey: &PublicKey) -> Packet {
@@ -101,12 +101,12 @@ impl Packet {
     self
   }
 
-  pub fn into_bytes(self) -> Result<Vec<u8>, MesherFail> {
+  pub(crate) fn into_bytes(self) -> Result<Vec<u8>, MesherFail> {
     let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
     bincode::serialize(&packet).map_err(|e| MesherFail::Other(Box::new(e)))
   }
 
-  pub fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, MesherFail> {
+  pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, MesherFail> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
     .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
     .map_err(|_| MesherFail::InvalidPacket)

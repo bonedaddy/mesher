@@ -12,6 +12,6 @@ pub mod prelude {
     transports::Transport,
     fail::MesherFail,
     mesher::Mesher,
-    packet::SimpleRoute,
+    packet::Packet,
   };
 }

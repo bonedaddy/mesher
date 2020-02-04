@@ -1,5 +1,4 @@
 use {
-  rand::prelude::*,
   std::collections::HashMap,
   crate::prelude::*,
 };
@@ -18,8 +17,6 @@ impl Message {
 pub struct Mesher {
   transports: HashMap<String, Box<dyn Transport>>,
   own_skeys: Vec<SecretKey>,
-  own_pkeys: Vec<PublicKey>,
-  rng: rand::rngs::ThreadRng,
 }
 
 impl Mesher {
@@ -30,9 +27,7 @@ impl Mesher {
   pub fn unsigned(own_skeys: Vec<SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
-      own_pkeys: own_skeys.iter().map(SecretKey::pkey).collect(),
       own_skeys,
-      rng: ThreadRng::default(),
     }
   }
 
@@ -58,14 +53,6 @@ impl Mesher {
     self.get_transport_for_path(path)?.listen(path.to_owned())
   }
 
-  fn random_key(&mut self) -> Result<&PublicKey, MesherFail> {
-    self
-      .own_pkeys
-      .choose(&mut self.rng)
-      // .map(Clone::clone)
-      .ok_or(MesherFail::NoKeys)
-  }
-
   fn process_packet(&mut self, pkt: Vec<u8>) -> crate::fail::Result<Vec<Message>> {
     let dis = crate::packet::Packet::from_bytes(&pkt, &self.own_skeys)?;
     let mut messages = vec![];
@@ -80,9 +67,12 @@ impl Mesher {
   }
 
   pub fn send(&mut self, message: &[u8], route: crate::packet::SimpleRoute) -> crate::fail::Result<()> {
-    let assembled = crate::packet::Packet::along_route(message, route, self.random_key()?).into_bytes()?;
-    self.process_packet(assembled)?;
-    Ok(())
+    let (packet, hop) = crate::packet::Packet::along_route(message, route);
+    self.launch(packet, &hop)
+  }
+
+  pub fn launch(&mut self, packet: crate::packet::Packet, first_hop: &str) -> crate::fail::Result<()> {
+    self.bounce(&packet.into_bytes()?, first_hop)
   }
 
   fn bounce(&mut self, packet: &[u8], path: &str) -> crate::fail::Result<()> {

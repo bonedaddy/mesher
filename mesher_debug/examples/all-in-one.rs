@@ -1,4 +1,4 @@
-use mesher::prelude::*;
+use mesher::{prelude::*, packet::SimpleRoute};
 
 fn make_mesher(name: &str) -> Mesher {
   let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of(name) }]);
