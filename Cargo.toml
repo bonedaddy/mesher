@@ -4,4 +4,5 @@ members = [
   "mesher_debug",
   "mesher_standard",
   "mesher_stego",
+  "mesher_node",
 ]
