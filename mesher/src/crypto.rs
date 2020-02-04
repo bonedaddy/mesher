@@ -1,9 +1,11 @@
 // TODO: Replace with real crypto
 
+
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8, String);
 impl PublicKey {
   // Unsafe because this is a /terrible/ way to generate keys
+  #[allow(clippy::missing_safety_doc)]
   pub unsafe fn of(name: &str) -> PublicKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     PublicKey(sum, name.to_owned())
@@ -18,6 +20,7 @@ impl PublicKey {
 pub struct SecretKey(u8, String);
 impl SecretKey {
   // Unsafe because this is a /terrible/ way to generate keys
+  #[allow(clippy::missing_safety_doc)]
   pub unsafe fn of(name: &str) -> SecretKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     SecretKey(sum, name.to_owned())
