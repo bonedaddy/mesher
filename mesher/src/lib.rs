@@ -1,5 +1,7 @@
 #![warn(clippy::all)]
 
+#![allow(clippy::missing_safety_doc)]
+
 #[cfg(feature = "debug")]
 #[macro_use]
 extern crate lazy_static;

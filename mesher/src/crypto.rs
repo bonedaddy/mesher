@@ -1,10 +1,10 @@
 // TODO: Replace with real crypto
-// (includes removing `PublicKey::of`/`SecretKey::of` or making them unsafe)
 
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8, String);
 impl PublicKey {
-  pub fn of(name: &str) -> PublicKey {
+  // Unsafe because this is a /terrible/ way to generate keys
+  pub unsafe fn of(name: &str) -> PublicKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     PublicKey(sum, name.to_owned())
   }
@@ -17,7 +17,8 @@ impl PublicKey {
 #[derive(Debug, Clone)]
 pub struct SecretKey(u8, String);
 impl SecretKey {
-  pub fn of(name: &str) -> SecretKey {
+  // Unsafe because this is a /terrible/ way to generate keys
+  pub unsafe fn of(name: &str) -> SecretKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     SecretKey(sum, name.to_owned())
   }

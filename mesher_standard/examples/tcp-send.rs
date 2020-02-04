@@ -16,9 +16,9 @@ fn main() {
     .expect("Failed to read from STDIN");
 
   println!("\n---\nSending {} bytes...", data.len());
-  let mut m = Mesher::unsigned(vec![SecretKey::of("who cares")]);
+  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("who cares") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
-  m.send(&data, SimpleRoute::to(&PublicKey::of("receiver"), &format!("tcp:{}", sock)))
+  m.send(&data, SimpleRoute::to(&unsafe { PublicKey::of("receiver") }, &format!("tcp:{}", sock)))
     .expect("Failed to send data");
   println!("Sent! Did you see it get received?");
 }

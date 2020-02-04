@@ -4,13 +4,13 @@ use mesher_standard::TCP;
 use std::{thread::sleep, time::Duration};
 
 fn make_sender() -> Mesher {
-  let mut m = Mesher::unsigned(vec![SecretKey::of("sender")]);
+  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("sender") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m
 }
 
 fn make_receiver() -> Mesher {
-  let mut m = Mesher::unsigned(vec![SecretKey::of("receiver")]);
+  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("receiver") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m.listen_on("tcp:[::1]:18540").expect("Failed to listen on port");
   m
@@ -21,7 +21,7 @@ const MESSAGES: &[&str] = &["Hello", "This is a TCP demo", "Goodbye"];
 fn main() {
   let mut m1 = make_sender();
   let mut m2 = make_receiver();
-  let path = SimpleRoute::to(&PublicKey::of("receiver"), "tcp:[::1]:18540");
+  let path = SimpleRoute::to(&unsafe { PublicKey::of("receiver") }, "tcp:[::1]:18540");
 
   for message in MESSAGES {
     m1.send(message.as_bytes(), path.clone()).expect("Failed to send");
