@@ -7,9 +7,9 @@ use std::{
   thread::Builder,
 };
 
-fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, TransportFail> {
+fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, MesherFail> {
   let (_, path) = path.split_at(scheme.len() + 1);
-  let get_path_fail = || TransportFail::InvalidURL(format!("not a valid socket address format: {}", path));
+  let get_path_fail = || MesherFail::InvalidURL(format!("not a valid socket address format: {}", path));
   path
     .to_socket_addrs()
     .map_err(|_| get_path_fail())?
@@ -17,9 +17,9 @@ fn socket_addr_from_string(scheme: &str, path: String) -> Result<SocketAddr, Tra
     .ok_or_else(get_path_fail)
 }
 
-fn listen(scheme: &str, addr: SocketAddr, sender: Sender<Vec<u8>>) -> Result<(), TransportFail> {
+fn listen(scheme: &str, addr: SocketAddr, sender: Sender<Vec<u8>>) -> Result<(), MesherFail> {
   let tcp_listen =
-    TcpListener::bind(addr).map_err(|e| TransportFail::ListenFailure(format!("Failed to bind listener: {:?}", e)))?;
+    TcpListener::bind(addr).map_err(|e| MesherFail::ListenFailure(format!("Failed to bind listener: {:?}", e)))?;
 
   let thread_code = move || {
     for conn in tcp_listen.incoming() {
@@ -40,7 +40,7 @@ fn listen(scheme: &str, addr: SocketAddr, sender: Sender<Vec<u8>>) -> Result<(),
   Builder::new()
     .name(format!("TCP {}:{} listener", scheme, addr))
     .spawn(thread_code)
-    .map_err(|e| TransportFail::SetupFailure(format!("Faield to start TCP {}: listener: {:?}", scheme, e)))?;
+    .map_err(|e| MesherFail::SetupFailure(format!("Faield to start TCP {}: listener: {:?}", scheme, e)))?;
 
   Ok(())
 }
@@ -52,7 +52,7 @@ pub struct TCP {
 }
 
 impl Transport for TCP {
-  fn new(scheme: &str) -> Result<Self, TransportFail> {
+  fn new(scheme: &str) -> Result<Self, MesherFail> {
     let (sender, receiver) = channel();
     Ok(TCP {
       scheme: scheme.to_string(),
@@ -61,23 +61,23 @@ impl Transport for TCP {
     })
   }
 
-  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
+  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), MesherFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
     let mut out = TcpStream::connect(sock)
-      .map_err(|e| TransportFail::SendFailure(format!("Failed to establish TCP connection: {:?}", e)))?;
+      .map_err(|e| MesherFail::SendFailure(format!("Failed to establish TCP connection: {:?}", e)))?;
     out
       .write_all(&blob)
-      .map_err(|e| TransportFail::SendFailure(format!("Failed to send data: {:?}", e)))?;
+      .map_err(|e| MesherFail::SendFailure(format!("Failed to send data: {:?}", e)))?;
     Ok(())
   }
 
-  fn listen(&mut self, path: String) -> Result<(), TransportFail> {
+  fn listen(&mut self, path: String) -> Result<(), MesherFail> {
     let sock = socket_addr_from_string(&self.scheme, path)?;
     listen(&self.scheme, sock, self.sender.clone())?;
     Ok(())
   }
 
-  fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail> {
+  fn receive(&mut self) -> Result<Vec<Vec<u8>>, MesherFail> {
     Ok(self.receiver.try_iter().collect())
   }
 }

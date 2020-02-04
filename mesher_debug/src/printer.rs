@@ -7,14 +7,14 @@ pub struct Printer {
 }
 
 impl Transport for Printer {
-  fn new(scheme: &str) -> Result<Self, TransportFail> {
+  fn new(scheme: &str) -> Result<Self, MesherFail> {
     println!("Creating Printer transport under scheme {}", scheme);
     Ok(Printer {
       scheme: scheme.to_owned(),
     })
   }
 
-  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), TransportFail> {
+  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), MesherFail> {
     println!("Printer {} sent {} bytes to {}. In hex:", self.scheme, path, blob.len());
     // most of the message
     for s in 0..blob.len() / 16 {
@@ -31,12 +31,12 @@ impl Transport for Printer {
     Ok(())
   }
 
-  fn receive(&mut self) -> Result<Vec<Vec<u8>>, TransportFail> {
+  fn receive(&mut self) -> Result<Vec<Vec<u8>>, MesherFail> {
     println!("Printer {} polled for more data", self.scheme);
     Ok(vec![])
   }
 
-  fn listen(&mut self, path: String) -> Result<(), TransportFail> {
+  fn listen(&mut self, path: String) -> Result<(), MesherFail> {
     println!("Printer {} told to listen on path {}", self.scheme, path);
     Ok(())
   }

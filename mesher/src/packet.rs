@@ -77,17 +77,14 @@ impl Chunk {
   }
 }
 
+#[derive(Default)]
 pub struct Packet {
   chunks: Vec<(Chunk, PublicKey)>,
 }
 
 impl Packet {
-  pub fn new() -> Packet {
-    Packet { chunks: vec![] }
-  }
-
   pub(crate) fn along_route(message: &[u8], route: SimpleRoute, self_pkey: &PublicKey) -> Packet {
-    let mut this = Packet::new().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
+    let mut this = Packet::default().add_message(message, &route.target).add_hop(route.first_hop, self_pkey);
     for (transport, key) in route.transports {
       this = this.add_hop(transport, &key);
     }
@@ -104,14 +101,14 @@ impl Packet {
     self
   }
 
-  pub fn into_bytes(self) -> Result<Vec<u8>, TransportFail> {
+  pub fn into_bytes(self) -> Result<Vec<u8>, MesherFail> {
     let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
-    bincode::serialize(&packet).map_err(|e| TransportFail::Other(Box::new(e)))
+    bincode::serialize(&packet).map_err(|e| MesherFail::Other(Box::new(e)))
   }
 
-  pub fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, TransportFail> {
+  pub fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, MesherFail> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
     .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
-    .map_err(|_| TransportFail::InvalidPacket)
+    .map_err(|_| MesherFail::InvalidPacket)
   }
 }

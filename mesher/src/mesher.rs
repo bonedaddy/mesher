@@ -36,34 +36,34 @@ impl Mesher {
     }
   }
 
-  pub fn add_transport<T: Transport + 'static>(&mut self, scheme: &str) -> Result<(), TransportFail> {
+  pub fn add_transport<T: Transport + 'static>(&mut self, scheme: &str) -> Result<(), MesherFail> {
     self.transports.insert(scheme.to_owned(), Box::new(T::new(scheme)?));
     Ok(())
   }
 
   #[allow(clippy::borrowed_box)]
-  fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, TransportFail> {
+  fn get_transport_for_path(&mut self, path: &str) -> Result<&mut Box<dyn Transport>, MesherFail> {
     let scheme = path
       .splitn(2, ':')
       .next()
-      .ok_or_else(|| TransportFail::InvalidURL("no colon-delimited scheme segment".to_string()))?
+      .ok_or_else(|| MesherFail::InvalidURL("no colon-delimited scheme segment".to_string()))?
       .to_owned();
     self
       .transports
       .get_mut(&scheme)
-      .ok_or(TransportFail::UnregisteredScheme(scheme))
+      .ok_or(MesherFail::UnregisteredScheme(scheme))
   }
 
-  pub fn listen_on(&mut self, path: &str) -> Result<(), TransportFail> {
+  pub fn listen_on(&mut self, path: &str) -> Result<(), MesherFail> {
     self.get_transport_for_path(path)?.listen(path.to_owned())
   }
 
-  fn random_key(&mut self) -> crate::fail::Result<&PublicKey> {
+  fn random_key(&mut self) -> Result<&PublicKey, MesherFail> {
     self
       .own_pkeys
       .choose(&mut self.rng)
       // .map(Clone::clone)
-      .ok_or(crate::fail::Fail::NoKeys)
+      .ok_or(MesherFail::NoKeys)
   }
 
   fn process_packet(&mut self, pkt: Vec<u8>) -> crate::fail::Result<Vec<Message>> {

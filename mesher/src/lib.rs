@@ -4,16 +4,18 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod crypto;
-mod fail;
-mod packet;
-mod transports;
-mod mesher;
+pub mod crypto;
+pub mod packet;
+pub mod transports;
+pub mod mesher;
+pub mod fail;
 
 pub mod prelude {
   pub use crate::{
     crypto::{PublicKey, SecretKey},
-    transports::{Transport, TransportFail},
-    mesher::Mesher, packet::SimpleRoute,
+    transports::Transport,
+    fail::MesherFail,
+    mesher::Mesher,
+    packet::SimpleRoute,
   };
 }
