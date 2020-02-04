@@ -24,8 +24,8 @@ fn main() {
         _ => {
           println!("Binary message received ({} bytes):", contents.len());
           for (i, byte) in contents.iter().enumerate() {
-            print!("{:02x} ", byte);
-            if i % 16 == 15 {
+            print!("{:02x}", byte);
+            if i % 40 == 39 {
               println!();
             }
           }
