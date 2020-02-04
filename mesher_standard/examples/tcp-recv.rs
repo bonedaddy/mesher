@@ -12,11 +12,9 @@ fn main() {
   m.listen_on(&format!("tcp:{}", sock))
     .expect("Failed to add listener for messages");
 
-  let mut count = 0;
   loop {
     let recvd = m.recv().expect("Failed to receive messages");
     for msg in recvd {
-      count += 1;
       let contents = msg.contents();
       match std::str::from_utf8(contents) {
         Ok(s) if s.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) => {
