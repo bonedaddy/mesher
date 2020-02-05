@@ -2,7 +2,7 @@
 members = [
   "mesher",
   "mesher_debug",
-  "mesher_standard",
+  "mesher_basic",
   "mesher_stego",
   "mesher_node",
 ]

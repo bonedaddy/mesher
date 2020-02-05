@@ -193,6 +193,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mesher_basic"
+version = "0.1.0"
+dependencies = [
+ "mesher 0.0.9",
+]
+
+[[package]]
 name = "mesher_debug"
 version = "0.1.0"
 dependencies = [
@@ -203,13 +210,6 @@ dependencies = [
 
 [[package]]
 name = "mesher_node"
-version = "0.1.0"
-dependencies = [
- "mesher 0.0.9",
-]
-
-[[package]]
-name = "mesher_standard"
 version = "0.1.0"
 dependencies = [
  "mesher 0.0.9",

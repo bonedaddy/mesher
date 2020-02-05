@@ -1,5 +1,5 @@
 [package]
-name = "mesher_standard"
+name = "mesher_basic"
 version = "0.1.0"
 authors = ["Nic Hartley <nic@cybers.eco>"]
 edition = "2018"
