@@ -66,6 +66,7 @@ impl Mesher {
     Ok(messages)
   }
 
+  #[deprecated]
   pub fn send(&mut self, message: &[u8], route: crate::packet::SimpleRoute) -> crate::fail::Result<()> {
     let (packet, hop) = crate::packet::Packet::along_route(message, route);
     self.launch(packet, &hop)

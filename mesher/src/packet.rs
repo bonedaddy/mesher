@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 #[derive(Debug, Clone)]
+#[deprecated]
 pub struct SimpleRoute {
   target: PublicKey,
   first_hop: String,
