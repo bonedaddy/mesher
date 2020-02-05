@@ -1,4 +1,4 @@
-use mesher::{prelude::*, packet::SimpleRoute};
+use mesher::prelude::*;
 use mesher_basic::TCP;
 
 use std::{thread::sleep, time::Duration};
@@ -12,7 +12,7 @@ fn make_sender() -> Mesher {
 fn make_receiver() -> Mesher {
   let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("receiver") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
-  m.listen_on("tcp:[::1]:18540").expect("Failed to listen on port");
+  m.listen_on("tcp:localhost:18540").expect("Failed to listen on port");
   m
 }
 
@@ -21,10 +21,11 @@ const MESSAGES: &[&str] = &["Hello", "This is a TCP demo", "Goodbye"];
 fn main() {
   let mut m1 = make_sender();
   let mut m2 = make_receiver();
-  let path = SimpleRoute::to(&unsafe { PublicKey::of("receiver") }, "tcp:[::1]:18540");
 
   for message in MESSAGES {
-    m1.send(message.as_bytes(), path.clone()).expect("Failed to send");
+    let packet = Packet::default()
+      .add_message(message.as_bytes(), &unsafe { PublicKey::of("receiver") });
+    m1.launch(packet, "tcp:localhost:18540").expect("Failed to send");
     println!("Message sent: {}", message);
   }
 

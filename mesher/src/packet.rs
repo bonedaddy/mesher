@@ -1,7 +1,8 @@
 use crate::prelude::*;
 
 #[derive(Debug, Clone)]
-#[deprecated]
+#[deprecated(note = "Use Packet instead")]
+#[allow(deprecated)]
 pub struct SimpleRoute {
   target: PublicKey,
   first_hop: String,
@@ -9,6 +10,7 @@ pub struct SimpleRoute {
   // TODO: Replies
 }
 
+#[allow(deprecated)]
 impl SimpleRoute {
   pub fn to(target_key: &PublicKey, first_hop: &str) -> SimpleRoute {
     SimpleRoute {
@@ -84,6 +86,7 @@ pub struct Packet {
 }
 
 impl Packet {
+  #[allow(deprecated)]
   pub(crate) fn along_route(message: &[u8], route: SimpleRoute) -> (Packet, String) {
     let mut this = Packet::default().add_message(message, &route.target)/*.add_hop(route.first_hop, self_pkey)*/;
     for (transport, key) in route.transports {
