@@ -1,6 +1,6 @@
 use std::io::{stdin, Read};
 
-use mesher::{prelude::*, packet::SimpleRoute};
+use mesher::prelude::*;
 use mesher_basic::TCP;
 
 fn main() {
@@ -18,7 +18,6 @@ fn main() {
   println!("\n---\nSending {} bytes...", data.len());
   let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("who cares") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
-  m.send(&data, SimpleRoute::to(&unsafe { PublicKey::of("receiver") }, &format!("tcp:{}", sock)))
-    .expect("Failed to send data");
+  m.launch(Packet::default().add_message(&data, &unsafe { PublicKey::of("receiver") }), &format!("tcp:{}", sock)).expect("Failed to send data");
   println!("Sent! Did you see it get received?");
 }
