@@ -1,4 +1,4 @@
-use mesher::{prelude::*, packet::SimpleRoute};
+use mesher::prelude::*;
 
 fn make_mesher(name: &str) -> Mesher {
   let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of(name) }]);
@@ -14,21 +14,17 @@ fn main() {
   let m_n2 = make_mesher("n2");
   let m_target = make_mesher("target");
   m_root
-    .send(&[1], SimpleRoute::to(&unsafe { PublicKey::of("n2") }, "mock:n2"))
+    .launch(Packet::default().add_message(&[1], &unsafe { PublicKey::of("n2") }), "mock:n2")
     .expect("Failed to send 1");
   m_n1
-    .send(
-      &[2],
-      SimpleRoute::to(&unsafe { PublicKey::of("target") }, "mock:n2").add_hop(&unsafe { PublicKey::of("n2") }, "mock:target"),
-    )
+    .launch(Packet::default().add_message(&[2], &unsafe { PublicKey::of("target" )}).add_hop("mock:target".to_owned(), &unsafe { PublicKey::of("n2") }), "mock:n2")
     .expect("Failed to send 2");
   m_root
-    .send(
-      &[3],
-      SimpleRoute::to(&unsafe { PublicKey::of("target") }, "mock:n1")
-        .add_hop(&unsafe { PublicKey::of("n1") }, "mock:n2")
-        .add_hop(&unsafe { PublicKey::of("n2") }, "mock:target"),
-    )
+    .launch(Packet::default()
+      .add_message(&[3], &unsafe { PublicKey::of("target") })
+      .add_hop("mock:n2".to_owned(), &unsafe { PublicKey::of("n1") })
+      .add_hop("mock:target".to_owned(), &unsafe { PublicKey::of("n2") }),
+      "mock:n1")
     .expect("Failed to send 3");
   println!("Sent messages! Running along pipeline...");
   for mesher in &mut [m_root, m_n1, m_n2, m_target] {
