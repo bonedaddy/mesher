@@ -2,16 +2,23 @@
 
 pub mod crypto;
 pub mod fail;
-pub mod mesher;
-pub mod packet;
-pub mod transports;
+
+mod mesher;
+mod packet;
+mod transport;
+
+pub use crate::{
+  mesher::Mesher,
+  transport::Transport,
+  packet::Packet,
+};
 
 pub mod prelude {
   pub use crate::{
     crypto::{PublicKey, SecretKey},
     fail::MesherFail,
-    mesher::Mesher,
-    packet::Packet,
-    transports::Transport,
+    Mesher,
+    Transport,
+    Packet,
   };
 }
