@@ -4,12 +4,18 @@ use mesher_debug::InMemory;
 
 fn main() {
   let mut sender = Mesher::unsigned(vec![unsafe { SecretKey::of("s") }]);
-  sender.add_transport::<InMemory>("tcp").expect("Failed to add transport");
+  sender
+    .add_transport::<InMemory>("tcp")
+    .expect("Failed to add transport");
   let mut recvr1 = Mesher::unsigned(vec![unsafe { SecretKey::of("r1") }]);
-  recvr1.add_transport::<InMemory>("tcp").expect("Failed to add transport");
+  recvr1
+    .add_transport::<InMemory>("tcp")
+    .expect("Failed to add transport");
   recvr1.listen_on("tcp:localhost:18540").expect("Failed to listen");
   let mut recvr2 = Mesher::unsigned(vec![unsafe { SecretKey::of("r2") }]);
-  recvr2.add_transport::<InMemory>("tcp").expect("Failed to add transport");
+  recvr2
+    .add_transport::<InMemory>("tcp")
+    .expect("Failed to add transport");
   recvr2.listen_on("tcp:localhost:18550").expect("Failed to listen");
 
   let packet = Packet::default()
@@ -32,5 +38,4 @@ fn main() {
       break;
     }
   }
-  
 }

@@ -1,7 +1,4 @@
-use {
-  std::collections::HashMap,
-  crate::prelude::*,
-};
+use {crate::prelude::*, std::collections::HashMap};
 
 #[derive(Debug)]
 pub struct Message {

@@ -19,7 +19,7 @@ impl SimpleRoute {
       transports: Vec::new(),
     }
   }
-  
+
   pub fn add_hop(mut self, node_key: &PublicKey, path: &str) -> SimpleRoute {
     self.transports.push((path.to_owned(), node_key.clone()));
     self
@@ -112,7 +112,7 @@ impl Packet {
 
   pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, MesherFail> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
-    .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
-    .map_err(|_| MesherFail::InvalidPacket)
+      .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
+      .map_err(|_| MesherFail::InvalidPacket)
   }
 }

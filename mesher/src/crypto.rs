@@ -1,6 +1,5 @@
 // TODO: Replace with real crypto
 
-
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8, String);
 impl PublicKey {

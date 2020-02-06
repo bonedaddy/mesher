@@ -23,8 +23,7 @@ fn main() {
   let mut m2 = make_receiver();
 
   for message in MESSAGES {
-    let packet = Packet::default()
-      .add_message(message.as_bytes(), &unsafe { PublicKey::of("receiver") });
+    let packet = Packet::default().add_message(message.as_bytes(), &unsafe { PublicKey::of("receiver") });
     m1.launch(packet, "tcp:localhost:18540").expect("Failed to send");
     println!("Message sent: {}", message);
   }
