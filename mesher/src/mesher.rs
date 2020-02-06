@@ -63,13 +63,6 @@ impl Mesher {
     Ok(messages)
   }
 
-  #[deprecated]
-  #[allow(deprecated)]
-  pub fn send(&mut self, message: &[u8], route: crate::packet::SimpleRoute) -> crate::fail::Result<()> {
-    let (packet, hop) = crate::packet::Packet::along_route(message, route);
-    self.launch(packet, &hop)
-  }
-
   pub fn launch(&mut self, packet: crate::packet::Packet, first_hop: &str) -> crate::fail::Result<()> {
     self.bounce(&packet.into_bytes()?, first_hop)
   }

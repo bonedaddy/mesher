@@ -1,31 +1,5 @@
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
-#[deprecated(note = "Use Packet instead")]
-#[allow(deprecated)]
-pub struct SimpleRoute {
-  target: PublicKey,
-  first_hop: String,
-  transports: Vec<(String, PublicKey)>,
-  // TODO: Replies
-}
-
-#[allow(deprecated)]
-impl SimpleRoute {
-  pub fn to(target_key: &PublicKey, first_hop: &str) -> SimpleRoute {
-    SimpleRoute {
-      target: target_key.clone(),
-      first_hop: first_hop.to_owned(),
-      transports: Vec::new(),
-    }
-  }
-
-  pub fn add_hop(mut self, node_key: &PublicKey, path: &str) -> SimpleRoute {
-    self.transports.push((path.to_owned(), node_key.clone()));
-    self
-  }
-}
-
 const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 
 #[derive(Debug)]
@@ -86,15 +60,6 @@ pub struct Packet {
 }
 
 impl Packet {
-  #[allow(deprecated)]
-  pub(crate) fn along_route(message: &[u8], route: SimpleRoute) -> (Packet, String) {
-    let mut this = Packet::default().add_message(message, &route.target)/*.add_hop(route.first_hop, self_pkey)*/;
-    for (transport, key) in route.transports {
-      this = this.add_hop(transport, &key);
-    }
-    (this, route.first_hop)
-  }
-
   pub fn add_message(mut self, data: &[u8], target_pkey: &PublicKey) -> Packet {
     self.chunks.push((Chunk::Message(data.to_vec()), target_pkey.clone()));
     self
