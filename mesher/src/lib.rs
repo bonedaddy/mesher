@@ -19,7 +19,7 @@ pub mod prelude {
 
   pub use crate::{
     crypto::{PublicKey, SecretKey},
-    fail::MesherFail,
+    fail,
     Mesher,
     Transport,
     Packet,

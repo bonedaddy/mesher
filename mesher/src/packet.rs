@@ -97,9 +97,9 @@ impl Packet {
   }
 
   /// Serializes the packet into a sendable format.
-  pub(crate) fn into_bytes(self) -> Result<Vec<u8>, MesherFail> {
+  pub(crate) fn into_bytes(self) -> fail::Result<Vec<u8>> {
     let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
-    bincode::serialize(&packet).map_err(|e| MesherFail::Other(Box::new(e)))
+    bincode::serialize(&packet).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
   /// Given a packet and all of our secret keys, decrypt as many chunks as possible.
@@ -111,9 +111,9 @@ impl Packet {
   /// 
   ///  [1]: enum.Chunk.html#variant.Encrypted
   ///  [2]: enum.Chunk.html#method.decrypt
-  pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> Result<Vec<Chunk>, MesherFail> {
+  pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
       .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
-      .map_err(|_| MesherFail::InvalidPacket)
+      .map_err(|_| fail::MesherFail::InvalidPacket)
   }
 }

@@ -12,11 +12,11 @@ pub struct InMemory {
 }
 
 impl Transport for InMemory {
-  fn new(_scheme: &str) -> Result<Self, MesherFail> {
+  fn new(_scheme: &str) -> fail::Result<Self> {
     Ok(InMemory { listening: vec![] })
   }
 
-  fn send(&mut self, path: String, blob: Vec<u8>) -> Result<(), MesherFail> {
+  fn send(&mut self, path: String, blob: Vec<u8>) -> fail::Result<()> {
     let mut packets = PACKETS.lock().expect("poisoned lock?");
     match packets.get_mut(&path) {
       Some(v) => v.push(blob),
@@ -27,12 +27,12 @@ impl Transport for InMemory {
     Ok(())
   }
 
-  fn listen(&mut self, path: String) -> Result<(), MesherFail> {
+  fn listen(&mut self, path: String) -> fail::Result<()> {
     self.listening.push(path);
     Ok(())
   }
 
-  fn receive(&mut self) -> Result<Vec<Vec<u8>>, MesherFail> {
+  fn receive(&mut self) -> fail::Result<Vec<Vec<u8>>> {
     let mut packets = PACKETS.lock().expect("poisoned lock?");
     Ok(
       self
