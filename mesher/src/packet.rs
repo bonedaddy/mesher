@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
-
 #[derive(Debug)]
 pub(crate) enum Chunk {
   Message(Vec<u8>),
@@ -10,10 +8,9 @@ pub(crate) enum Chunk {
   Encrypted(Vec<u8>),
 }
 
-// TODO: real crypto
 impl Chunk {
   fn encrypt(self, key: PublicKey) -> Vec<u8> {
-    let mut b = MAGIC.to_vec();
+    let mut b = vec![];
     let raw = match self {
       Chunk::Message(mut m) => {
         b.push(0u8);
@@ -32,13 +29,13 @@ impl Chunk {
 
   fn decrypt_onekey(bytes: &[u8], key: &SecretKey) -> Result<Chunk, ()> {
     let mut attempt_dec = key.decrypt(bytes)?;
-    if attempt_dec.len() < 5 || &attempt_dec[0..4] != MAGIC {
+    if attempt_dec.is_empty() {
       return Err(());
     }
-    match attempt_dec[4] {
-      0 => Ok(Chunk::Message(attempt_dec.drain(5..).collect())),
+    match attempt_dec[0] {
+      0 => Ok(Chunk::Message(attempt_dec.drain(1..).collect())),
       1 => Ok(Chunk::Transport(
-        String::from_utf8(attempt_dec.drain(5..).collect()).map_err(|_| ())?,
+        String::from_utf8(attempt_dec.drain(1..).collect()).map_err(|_| ())?,
       )),
       _ => Err(()),
     }

@@ -5,6 +5,9 @@
 
 // TODO: Replace with real crypto
 
+/// Some magic bytes to indicate if stuff is ours.
+/// Only used in this bad crypto impl; the real one will use authenticated encryption.
+const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 
 /// The public half of the keypair.
 /// 
@@ -31,7 +34,7 @@ impl PublicKey {
   /// The return value's format should be considered, by and large, a black box.
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   pub(crate) fn encrypt(&self, data: &[u8]) -> Vec<u8> {
-    data.iter().map(|b| b.wrapping_add(self.0)).collect()
+    MAGIC.iter().chain(data.iter()).map(|b| b.wrapping_add(self.0)).collect()
   }
 }
 
@@ -64,7 +67,12 @@ impl SecretKey {
   /// 
   ///  [1]: struct.PublicKey.html#method.encrypt
   pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
-    Ok(ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect())
+    let mut dec: Vec<_> = ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect();
+    if &dec[0..4] != MAGIC {
+      Err(())
+    } else {
+      Ok(dec.split_off(4))
+    }
   }
 
   /// Derive the public half of the keypair based on the secret key.
