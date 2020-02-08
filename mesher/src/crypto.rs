@@ -122,3 +122,32 @@ impl SecretKey {
     PublicKey(self.0)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn encryption_decryptable() {
+    let pk = unsafe { PublicKey::of("crypt") };
+    let sk = unsafe { SecretKey::of("crypt") };
+
+    let encd = pk.encrypt(&[1, 2, 3, 4]);
+    let decd = sk.decrypt(&encd);
+
+    assert_eq!(Ok(vec![1, 2, 3, 4]), decd);
+  }
+
+  #[test]
+  fn signed_encryption_decryptable_checked() {
+    let send_pk = unsafe { PublicKey::of("send") };
+    let send_sk = unsafe { SecretKey::of("send") };
+    let recv_pk = unsafe { PublicKey::of("recv") };
+    let recv_sk = unsafe { SecretKey::of("recv") };
+
+    let encd = recv_pk.encrypt_and_sign(&[1, 2, 3, 4], &send_sk);
+    let decd = recv_sk.decrypt_signed(&encd, &send_pk);
+
+    assert_eq!(Ok(vec![1, 2, 3, 4]), decd);
+  }
+}
