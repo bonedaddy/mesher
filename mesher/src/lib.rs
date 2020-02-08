@@ -1,4 +1,5 @@
 #![warn(clippy::all)]
+#![doc(test(attr(deny(warnings))))]
 
 pub mod crypto;
 pub mod fail;
