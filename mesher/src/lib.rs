@@ -15,6 +15,8 @@ pub use crate::{
 };
 
 pub mod prelude {
+  //! Re-exports all the commonly used parts for slightly more ergonomic use, at the expense of cluttering up the global namespace.
+
   pub use crate::{
     crypto::{PublicKey, SecretKey},
     fail::MesherFail,
