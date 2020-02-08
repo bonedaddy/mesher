@@ -25,6 +25,10 @@ pub struct Mesher {
 impl Mesher {
   /// Creates a mesher which signs its outgoing messages with keys chosen randomly from its list.
   /// The keys are also used when receiving messages, to decrypt the ones meant for it.
+  /// 
+  /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
+  /// Meshers doing signing will expect their incoming packets to have signatures; meshers not doing it won't.
+  /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   #[deprecated(note = "Not yet implemented.")]
   pub fn signed(_own_skeys: Vec<SecretKey>, _source_sigs: Vec<PublicKey>) -> Mesher {
     unimplemented!()
@@ -32,6 +36,10 @@ impl Mesher {
 
   /// Creates a mesher which doesn't sign its outgoing messages.
   /// The keys are used when receiving messages, to decrypt the ones meant for it.
+  /// 
+  /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
+  /// Meshers doing signing will expect their incoming packets to have signatures; meshers not doing it won't.
+  /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   pub fn unsigned(own_skeys: Vec<SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
