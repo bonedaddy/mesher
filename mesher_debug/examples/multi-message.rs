@@ -18,7 +18,7 @@ fn main() {
     .expect("Failed to add transport");
   recvr2.listen_on("tcp:localhost:18550").expect("Failed to listen");
 
-  let packet = Packet::default()
+  let packet = Packet::unsigned()
     .add_message(&[1], &unsafe { PublicKey::of("r1") })
     .add_message(&[2], &unsafe { PublicKey::of("r2") })
     .add_hop("tcp:localhost:18550".to_owned(), &unsafe { PublicKey::of("r1") });

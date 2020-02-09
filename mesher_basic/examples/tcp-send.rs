@@ -19,7 +19,7 @@ fn main() {
   let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("who cares") }]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
   m.launch(
-    Packet::default().add_message(&data, &unsafe { PublicKey::of("receiver") }),
+    Packet::unsigned().add_message(&data, &unsafe { PublicKey::of("receiver") }),
     &format!("tcp:{}", sock),
   )
   .expect("Failed to send data");

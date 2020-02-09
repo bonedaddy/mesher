@@ -31,7 +31,7 @@ fn main() {
   let mut m2 = make_receiver();
 
   for message in MESSAGES {
-    let packet = Packet::default()
+    let packet = Packet::unsigned()
       .add_message(message.as_bytes(), &unsafe { PublicKey::of("receiver") })
       .add_hop("tcp:localhost:18540".to_owned(), &unsafe { PublicKey::of("bouncer") });
     m1.launch(packet, "tcp:localhost:18550").expect("Faield to send");

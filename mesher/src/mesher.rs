@@ -20,30 +20,36 @@ impl Message {
 pub struct Mesher {
   transports: HashMap<String, Box<dyn Transport>>,
   own_skeys: Vec<SecretKey>,
+  sender_pkeys: Vec<PublicKey>,
 }
 
 impl Mesher {
-  /// Creates a mesher which signs its outgoing messages with keys chosen randomly from its list.
-  /// The keys are also used when receiving messages, to decrypt the ones meant for it.
+  /// Creates a mesher which expects incoming messages to be signed with one of the given keys.
   /// 
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
-  /// Meshers doing signing will expect their incoming packets to have signatures; meshers not doing it won't.
+  /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
-  #[deprecated(note = "Not yet implemented.")]
-  pub fn signed(_own_skeys: Vec<SecretKey>, _source_sigs: Vec<PublicKey>) -> Mesher {
-    unimplemented!()
+  pub fn signed(own_skeys: Vec<SecretKey>, sender_pkeys: Vec<PublicKey>) -> Mesher {
+    assert!(!sender_pkeys.is_empty(), "Must have at least one sender key listed");
+
+    Mesher {
+      transports: HashMap::new(),
+      own_skeys,
+      sender_pkeys,
+    }
   }
 
   /// Creates a mesher which doesn't sign its outgoing messages.
   /// The keys are used when receiving messages, to decrypt the ones meant for it.
   /// 
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
-  /// Meshers doing signing will expect their incoming packets to have signatures; meshers not doing it won't.
+  /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   pub fn unsigned(own_skeys: Vec<SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
       own_skeys,
+      sender_pkeys: vec![],
     }
   }
 
@@ -85,7 +91,11 @@ impl Mesher {
   /// 
   /// It will try to use _all_ of the secret keys associated with the mesher to decrypt the packet.
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
-    let dis = crate::packet::Packet::from_bytes(&pkt, &self.own_skeys)?;
+    let dis = if self.sender_pkeys.is_empty() {
+      Packet::from_bytes(&pkt, &self.own_skeys)?
+    } else {
+      Packet::from_signed_bytes(&pkt, &self.own_skeys, &self.sender_pkeys)?
+    };
     let mut messages = vec![];
     for piece in dis {
       match piece {
@@ -99,7 +109,7 @@ impl Mesher {
 
   /// Sends a packet out.
   /// Note that the packet is not processed, so any instructions meant for this mesher will not be seen (unless the packet comes back, of course)
-  pub fn launch(&mut self, packet: crate::packet::Packet, first_hop: &str) -> fail::Result<()> {
+  pub fn launch(&mut self, packet: Packet, first_hop: &str) -> fail::Result<()> {
     self.bounce(&packet.into_bytes()?, first_hop)
   }
 

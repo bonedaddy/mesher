@@ -14,48 +14,57 @@ pub(crate) enum Chunk {
 }
 
 impl Chunk {
+  /// Converts the Chunk into a series of bytes that represents it.
+  /// Best considered a black box, so it can change freely.
+  fn serialize(self) -> Vec<u8> {
+    match self {
+      Chunk::Message(mut m) => {
+        let mut b = vec![0];
+        b.append(&mut m);
+        b
+      }
+      Chunk::Transport(t) => {
+        let mut b = vec![1];
+        b.append(&mut t.into_bytes());
+        b
+      }
+      Chunk::Encrypted(v) => v,
+    }
+  }
+
+  /// Converts a series of bytes from [`Chunk::serialize`][1] back to a Chunk, if possible.
+  /// Best considered a black box, so it can change freely.
+  /// 
+  ///  [1]: #method.serialize
+  fn deserialize(mut from: Vec<u8>) -> Result<Chunk, ()> {
+    match from.get(0) {
+      Some(0) => Ok(Chunk::Message(from.drain(1..).collect())),
+      Some(1) => Ok(Chunk::Transport(
+        String::from_utf8(from.drain(1..).collect()).map_err(|_| ())?,
+      )),
+      _ => Err(()),
+    }
+  }
+  
   /// Convert this chunk to a raw byte form, then encrypt those to the public key.
   /// 
   /// Should be considered a black box, as the format may change in the future.
   /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`][1]
   /// 
   ///  [1]: #method.decrypt
-  fn encrypt(self, key: PublicKey) -> Vec<u8> {
-    let mut b = vec![];
-    let raw = match self {
-      Chunk::Message(mut m) => {
-        b.push(0u8);
-        b.append(&mut m);
-        b
-      }
-      Chunk::Transport(t) => {
-        b.push(1u8);
-        b.append(&mut t.into_bytes());
-        b
-      }
-      Chunk::Encrypted(v) => return v,
-    };
-    key.encrypt(&raw)
+  fn encrypt(self, target_key: PublicKey) -> Vec<u8> {
+    target_key.encrypt(&self.serialize())
   }
 
-  /// Attempt a decryption, but with one key.
-  /// Separating this into its own function simplifies the real decryption code.
-  fn decrypt_onekey(bytes: &[u8], key: &SecretKey) -> Result<Chunk, ()> {
-    let mut attempt_dec = key.decrypt(bytes)?;
-    if attempt_dec.is_empty() {
-      return Err(());
-    }
-    match attempt_dec[0] {
-      0 => Ok(Chunk::Message(attempt_dec.drain(1..).collect())),
-      1 => Ok(Chunk::Transport(
-        String::from_utf8(attempt_dec.drain(1..).collect()).map_err(|_| ())?,
-      )),
-      _ => Err(()),
-    }
+  /// Same as [`Chunk::encrypt`][1], but will also sign with the sender key.
+  /// 
+  ///  [1]: #method.encrypt
+  fn encrypt_and_sign(self, target_key: PublicKey, sender_key: &SecretKey) -> Vec<u8> {
+    target_key.encrypt_and_sign(&self.serialize(), sender_key)
   }
 
   /// Decrypt a chunk of bytes with all of our keys.
-  /// Returns the first chunk that was successfully decrypted.
+  /// Returns the chunk decrypted with the first key that worked.
   /// If none of them work, returns [`Chunk::Encrypted`][1].
   /// 
   /// Expect the input format to this to be a black box.
@@ -65,8 +74,25 @@ impl Chunk {
   ///  [2]: #method.encrypt
   fn decrypt(bytes: Vec<u8>, keys: &[SecretKey]) -> Chunk {
     for key in keys {
-      if let Ok(dec) = Self::decrypt_onekey(&bytes, key) {
-        return dec;
+      if let Ok(dec) = key.decrypt(&bytes) {
+        if let Ok(des) = Self::deserialize(dec) {
+          return des;
+        }
+      }
+    }
+    Chunk::Encrypted(bytes)
+  }
+
+  /// Same as [`Chunk::decrypt`][1] but will check signatures against the list of signing keys.
+  /// Note that for packets not meant for us, this /will/ go through every pair of (key, signing_key), since those two steps are combined in the crypto API.
+  fn decrypt_signed(bytes: Vec<u8>, keys: &[SecretKey], signing_keys: &[PublicKey]) -> Chunk {
+    for key in keys {
+      for signer in signing_keys {
+        if let Ok(dec) = key.decrypt_signed(&bytes, signer) {
+          if let Ok(des) = Self::deserialize(dec) {
+            return des;
+          }
+        }
       }
     }
     Chunk::Encrypted(bytes)
@@ -78,12 +104,28 @@ impl Chunk {
 /// Note that each piece of the packet is associated with a key.
 /// The keys don't have to be unique -- more than one piece can be associated with a single key.
 /// For example, if a node is meant to both receive a message and transport the packet further, those two might be encrypted with the same key.
-#[derive(Default)]
 pub struct Packet {
   chunks: Vec<(Chunk, PublicKey)>,
+  signing_key: Option<SecretKey>,
 }
 
 impl Packet {
+  /// Creates a packet whose chunks won't be signed.
+  pub fn unsigned() -> Packet {
+    Packet {
+      chunks: vec![],
+      signing_key: None,
+    }
+  }
+
+  /// Creates a packet whose chunks will be signed by the given key.
+  pub fn signed(skey: SecretKey) -> Packet {
+    Packet {
+      chunks: vec![],
+      signing_key: Some(skey),
+    }
+  }
+
   /// Adds a message to the packet, for the node with the right skey to read.
   pub fn add_message(mut self, data: &[u8], target_pkey: &PublicKey) -> Packet {
     self.chunks.push((Chunk::Message(data.to_vec()), target_pkey.clone()));
@@ -98,7 +140,10 @@ impl Packet {
 
   /// Serializes the packet into a sendable format.
   pub(crate) fn into_bytes(self) -> fail::Result<Vec<u8>> {
-    let packet = self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect::<Vec<_>>();
+    let packet: Vec<_> = match self.signing_key {
+      Some(skey) => self.chunks.into_iter().map(|(c, k)| c.encrypt_and_sign(k, &skey)).collect(),
+      None => self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect(),
+    };
     bincode::serialize(&packet).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
@@ -114,6 +159,15 @@ impl Packet {
   pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
       .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
+      .map_err(|_| fail::MesherFail::InvalidPacket)
+  }
+
+  /// Same as [`Packet::from_bytes`][1] but only decrypts chunks signed with one of the valid keys.
+  /// 
+  ///  [1]: #method.from_bytes
+  pub(crate) fn from_signed_bytes(packet: &[u8], keys: &[SecretKey], sender_keys: &[PublicKey]) -> fail::Result<Vec<Chunk>> {
+    bincode::deserialize::<Vec<Vec<u8>>>(packet)
+      .map(|packet| packet.into_iter().map(|c| Chunk::decrypt_signed(c, keys, sender_keys)).collect())
       .map_err(|_| fail::MesherFail::InvalidPacket)
   }
 }
