@@ -149,8 +149,8 @@ mod tests {
 
   #[test]
   fn signature_verifiable() {
-    let pk = unsafe { PublicKey::of("recv") };
-    let sk = unsafe { SecretKey::of("recv") };
+    let pk = unsafe { PublicKey::of("crypt") };
+    let sk = unsafe { SecretKey::of("crypt") };
 
     let signed = sk.sign(&[1, 2, 3, 4]);
     let veried = pk.verify(&signed);
