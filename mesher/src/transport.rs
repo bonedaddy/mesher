@@ -32,3 +32,7 @@ pub trait Transport {
   ///  [1]: #tymethod.listen
   fn receive(&mut self) -> fail::Result<Vec<Vec<u8>>>;
 }
+
+mod debug {
+
+}

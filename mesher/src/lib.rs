@@ -1,8 +1,13 @@
 #![warn(clippy::all)]
 #![doc(test(attr(deny(warnings))))]
 
+// for transport::debug::InMemory
+#[macro_use]
+extern crate lazy_static;
+
 pub mod crypto;
 pub mod fail;
+pub mod debug_transports;
 
 mod mesher;
 mod packet;

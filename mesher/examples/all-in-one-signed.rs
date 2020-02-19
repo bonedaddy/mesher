@@ -1,8 +1,9 @@
 use mesher::prelude::*;
+use mesher::debug_transports::InMemory;
 
 fn make_mesher(name: &str, sender_pkey: &PublicKey) -> Mesher {
   let mut m = Mesher::signed(vec![unsafe { SecretKey::of(name) }], vec![sender_pkey.clone()]);
-  m.add_transport::<mesher_debug::InMemory>("mock")
+  m.add_transport::<InMemory>("mock")
     .expect("failed to add mock");
   m.listen_on(&format!("mock:{}", name)).expect("failed to listen");
   m

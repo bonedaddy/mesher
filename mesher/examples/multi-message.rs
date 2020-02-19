@@ -1,6 +1,5 @@
 use mesher::prelude::*;
-
-use mesher_debug::InMemory;
+use mesher::debug_transports::InMemory;
 
 fn main() {
   let mut sender = Mesher::unsigned(vec![unsafe { SecretKey::of("s") }]);
