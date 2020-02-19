@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-pub mod printer;
+mod printer;
 pub use printer::Printer;
-pub mod inmemory;
+mod inmemory;
 pub use inmemory::InMemory;
