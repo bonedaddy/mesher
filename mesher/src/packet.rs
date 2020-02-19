@@ -60,7 +60,7 @@ impl Chunk {
   ///
   ///  [1]: #method.encrypt
   fn encrypt_and_sign(self, target_key: PublicKey, sender_key: &SecretKey) -> Vec<u8> {
-    target_key.encrypt_and_sign(&self.serialize(), sender_key)
+    sender_key.sign(&target_key.encrypt(&self.serialize()))
   }
 
   /// Decrypt a chunk of bytes with all of our keys.
@@ -84,18 +84,19 @@ impl Chunk {
   }
 
   /// Same as [`Chunk::decrypt`][1] but will check signatures against the list of signing keys.
-  /// Note that for packets not meant for us, this /will/ go through every pair of (key, signing_key), since those two steps are combined in the crypto API.
-  fn decrypt_signed(bytes: Vec<u8>, keys: &[SecretKey], signing_keys: &[PublicKey]) -> Chunk {
-    for key in keys {
-      for signer in signing_keys {
-        if let Ok(dec) = key.decrypt_signed(&bytes, signer) {
-          if let Ok(des) = Self::deserialize(dec) {
-            return des;
-          }
-        }
-      }
+  fn decrypt_signed(bytes: Vec<u8>, enc_keys: &[SecretKey], sign_keys: &[PublicKey]) -> Chunk {
+    let veried = match sign_keys.iter().find_map(|k| k.verify(&bytes).ok()) {
+      Some(v) => v,
+      None => return Chunk::Encrypted(bytes),
+    };
+    let decd = match enc_keys.iter().find_map(|k| k.decrypt(&veried).ok()) {
+      Some(d) => d,
+      None => return Chunk::Encrypted(bytes),
+    };
+    match Self::deserialize(decd) {
+      Ok(d) => d,
+      Err(_) => Chunk::Encrypted(bytes),
     }
-    Chunk::Encrypted(bytes)
   }
 }
 
