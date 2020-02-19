@@ -10,16 +10,16 @@
 const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 
 /// The public half of the keypair.
-/// 
+///
 /// It's used to *en*crypt things and check signatures.
 /// It can be automatically derived from the secret key with [`SecretKey::pkey`][1].
-/// 
+///
 ///  [1]: struct.SecretKey.html#method.pkey
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8);
 impl PublicKey {
   /// **Insecurely** generate a public key, deterministically, based off a name.
-  /// 
+  ///
   /// Unsafe because this is a **terrible** way to generate keys!
   /// It's only good for demos -- e.g. the various examples, where proper key management would add too much complexity.
   #[allow(clippy::missing_safety_doc)]
@@ -30,22 +30,26 @@ impl PublicKey {
 
   /// Encrypts a bunch of data with this public key.
   /// Only the associated secret key can decrypt it.
-  /// 
+  ///
   /// The return value's format should be considered, by and large, a black box.
   /// This ensures that the crypto can be upgraded without requiring any other code to change
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
   pub(crate) fn encrypt(&self, data: &[u8]) -> Vec<u8> {
-    MAGIC.iter().chain(data.iter()).map(|b| b.wrapping_add(self.0)).collect()
+    MAGIC
+      .iter()
+      .chain(data.iter())
+      .map(|b| b.wrapping_add(self.0))
+      .collect()
   }
 
   /// Encrypts a bunch of data and signs it with the given secret key.
   /// Only the associated secret key can decrypt it, but anyone can check that it's signed with the corresponding public key.
-  /// 
+  ///
   /// The return value's format should be considered, by and large, a black box.
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
   pub(crate) fn encrypt_and_sign(&self, data: &[u8], signer: &SecretKey) -> Vec<u8> {
@@ -57,17 +61,17 @@ impl PublicKey {
 }
 
 /// The secret half of the keypair.
-/// 
+///
 /// It's used to *de*crypt things and create signatures.
-/// 
+///
 /// The public half can be derived with [`SecretKey::pkey`][1].
-/// 
+///
 ///  [1]: #method.pkey
 #[derive(Debug, Clone)]
 pub struct SecretKey(u8);
 impl SecretKey {
   /// **Insecurely** generate a secret key, deterministically, based off a name.
-  /// 
+  ///
   /// Unsafe because this is a **terrible** way to generate keys!
   /// It's only good for demos -- e.g. the various examples.
   #[allow(clippy::missing_safety_doc)]
@@ -78,14 +82,14 @@ impl SecretKey {
 
   /// Decrypts a bunch of data that was encrypted with the associated public key.
   /// If it doesn't seem to actually be targeting this secret key, returns Err(())
-  /// 
+  ///
   /// The input's format should be considered, by and large, a black box.
   /// Just use what's returned by [`PublicKey::encrypt`][1].
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
-  /// 
+  ///
   ///  [1]: struct.PublicKey.html#method.encrypt
   pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
     let mut dec: Vec<_> = ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect();
@@ -98,14 +102,14 @@ impl SecretKey {
 
   /// Decrypts a bunch of data that was encrypted with the associated public key, checking that it's signed by the public key.
   /// If it doesn't seem to actually be targeting this secret key, or the signature is invalid, returns Err(())
-  /// 
+  ///
   /// The input's format should be considered, by and large, a black box.
   /// Just use what's returned by [`PublicKey::encrypt`][1].
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
-  /// 
+  ///
   ///  [1]: struct.PublicKey.html#method.encrypt
   pub(crate) fn decrypt_signed(&self, ciphertext: &[u8], signer: &PublicKey) -> Result<Vec<u8>, ()> {
     let (ciphertext, signature) = ciphertext.split_at(ciphertext.len() - 1);

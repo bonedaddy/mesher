@@ -3,24 +3,24 @@
 //! Contains the error-reporting enum for mesher.
 
 /// Every possible way a [`Mesher`][1] can fail to do something.
-/// 
+///
 /// Generally split into two categories, mesher and transport errors.
 /// The transports can error out in any stage of their lifetime except dropping: setup, sending, listening, or receiving.
-/// 
+///
 /// This enum is `#[non_exhaustive]` because future releases are all but guaranteed to add more specific, and therefore more helpful, error states.
-/// 
+///
 ///  [1]: ../struct.Mesher.html
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum MesherFail {
   /// The mesher needed at least one secret key but none were available.
-  /// 
+  ///
   /// This is only triggerd when keys are actually used, *not* during initialization.
   /// Meshers can generally be safely created without keys, then have them added, so long as it doesn't try to receive messages or send signed ones.
   NoKeys,
 
   /// A mesher received a packet in a format that couldn't be parsed into a packet.
-  /// 
+  ///
   /// Note that packets with no chunks encrypted for the receiving mesher will not be treated as an error.
   /// They will be no-ops.
   /// This error means that the packet itself had an invalid structure.
@@ -35,9 +35,9 @@ pub enum MesherFail {
   SetupFailure(String),
 
   /// The transport being asked to send data along a path wasn't able to.
-  /// 
+  ///
   /// This can trigger during calls to [`Mesher::recv`][1], since it will send packets as requested while parsing them.
-  /// 
+  ///
   ///  [1]: ../struct.Mesher.html
   SendFailure(String),
 
@@ -54,6 +54,6 @@ pub enum MesherFail {
 
 // TODO: Use this more
 /// A `Result` alias with [`MesherFail`][1] as the Err type to make some code a little less repetitive.
-/// 
+///
 ///  [1]: enum.MesherFail.html
 pub type Result<TOk> = std::result::Result<TOk, MesherFail>;

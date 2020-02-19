@@ -8,20 +8,13 @@ mod mesher;
 mod packet;
 mod transport;
 
-pub use crate::{
-  mesher::Mesher,
-  transport::Transport,
-  packet::Packet,
-};
+pub use crate::{mesher::Mesher, packet::Packet, transport::Transport};
 
 pub mod prelude {
   //! Re-exports all the commonly used parts for slightly more ergonomic use, at the expense of cluttering up the global namespace.
 
   pub use crate::{
     crypto::{PublicKey, SecretKey},
-    fail,
-    Mesher,
-    Transport,
-    Packet,
+    fail, Mesher, Packet, Transport,
   };
 }

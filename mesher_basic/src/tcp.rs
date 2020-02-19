@@ -18,8 +18,8 @@ fn socket_addr_from_string(scheme: &str, path: String) -> fail::Result<SocketAdd
 }
 
 fn listen(scheme: &str, addr: SocketAddr, sender: Sender<Vec<u8>>) -> fail::Result<()> {
-  let tcp_listen =
-    TcpListener::bind(addr).map_err(|e| fail::MesherFail::ListenFailure(format!("Failed to bind listener: {:?}", e)))?;
+  let tcp_listen = TcpListener::bind(addr)
+    .map_err(|e| fail::MesherFail::ListenFailure(format!("Failed to bind listener: {:?}", e)))?;
 
   let thread_code = move || {
     for conn in tcp_listen.incoming() {

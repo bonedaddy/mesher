@@ -14,7 +14,7 @@ impl Message {
 }
 
 /// The control interface for a single mesher.
-/// 
+///
 /// One important thing to note is that the Mesher struct **only** stores keys.
 /// You will need to do responsible key management, e.g. storing them securely.
 pub struct Mesher {
@@ -25,7 +25,7 @@ pub struct Mesher {
 
 impl Mesher {
   /// Creates a mesher which expects incoming messages to be signed with one of the given keys.
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
@@ -41,7 +41,7 @@ impl Mesher {
 
   /// Creates a mesher which doesn't sign its outgoing messages.
   /// The keys are used when receiving messages, to decrypt the ones meant for it.
-  /// 
+  ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
@@ -84,11 +84,11 @@ impl Mesher {
   }
 
   /// Does everything you'd expect when mesher receives a packet:
-  /// 
+  ///
   /// - Attempts to decrypt every line in the packet
   /// - Forwards the packet as dictated by it
   /// - Returns any messages contained in it
-  /// 
+  ///
   /// It will try to use _all_ of the secret keys associated with the mesher to decrypt the packet.
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
     let dis = if self.sender_pkeys.is_empty() {

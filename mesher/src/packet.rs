@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[derive(Debug)]
 pub(crate) enum Chunk {
   /// A message to pass back to the [`Mesher`][1]
-  /// 
+  ///
   ///  [1]: ../struct.Mesher.html
   Message(Vec<u8>),
   /// A path to send this packet along
@@ -34,7 +34,7 @@ impl Chunk {
 
   /// Converts a series of bytes from [`Chunk::serialize`][1] back to a Chunk, if possible.
   /// Best considered a black box, so it can change freely.
-  /// 
+  ///
   ///  [1]: #method.serialize
   fn deserialize(mut from: Vec<u8>) -> Result<Chunk, ()> {
     match from.get(0) {
@@ -45,19 +45,19 @@ impl Chunk {
       _ => Err(()),
     }
   }
-  
+
   /// Convert this chunk to a raw byte form, then encrypt those to the public key.
-  /// 
+  ///
   /// Should be considered a black box, as the format may change in the future.
   /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`][1]
-  /// 
+  ///
   ///  [1]: #method.decrypt
   fn encrypt(self, target_key: PublicKey) -> Vec<u8> {
     target_key.encrypt(&self.serialize())
   }
 
   /// Same as [`Chunk::encrypt`][1], but will also sign with the sender key.
-  /// 
+  ///
   ///  [1]: #method.encrypt
   fn encrypt_and_sign(self, target_key: PublicKey, sender_key: &SecretKey) -> Vec<u8> {
     target_key.encrypt_and_sign(&self.serialize(), sender_key)
@@ -66,10 +66,10 @@ impl Chunk {
   /// Decrypt a chunk of bytes with all of our keys.
   /// Returns the chunk decrypted with the first key that worked.
   /// If none of them work, returns [`Chunk::Encrypted`][1].
-  /// 
+  ///
   /// Expect the input format to this to be a black box.
   /// Give it things encrypted with [`Chunk::encrypt`][2].
-  /// 
+  ///
   ///  [1]: #variant.Encrypted
   ///  [2]: #method.encrypt
   fn decrypt(bytes: Vec<u8>, keys: &[SecretKey]) -> Chunk {
@@ -100,7 +100,7 @@ impl Chunk {
 }
 
 /// Represents a packet to be sent out.
-/// 
+///
 /// Note that each piece of the packet is associated with a key.
 /// The keys don't have to be unique -- more than one piece can be associated with a single key.
 /// For example, if a node is meant to both receive a message and transport the packet further, those two might be encrypted with the same key.
@@ -141,19 +141,23 @@ impl Packet {
   /// Serializes the packet into a sendable format.
   pub(crate) fn into_bytes(self) -> fail::Result<Vec<u8>> {
     let packet: Vec<_> = match self.signing_key {
-      Some(skey) => self.chunks.into_iter().map(|(c, k)| c.encrypt_and_sign(k, &skey)).collect(),
+      Some(skey) => self
+        .chunks
+        .into_iter()
+        .map(|(c, k)| c.encrypt_and_sign(k, &skey))
+        .collect(),
       None => self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect(),
     };
     bincode::serialize(&packet).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
   /// Given a packet and all of our secret keys, decrypt as many chunks as possible.
-  /// 
+  ///
   /// No error is raised if no chunks could be decrypted; you just get a Vec entirely
   /// composed of [`Chunk::Encrypted`][1].
-  /// 
+  ///
   /// See [`Chunk::decrypt`][2] for more information.
-  /// 
+  ///
   ///  [1]: enum.Chunk.html#variant.Encrypted
   ///  [2]: enum.Chunk.html#method.decrypt
   pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> fail::Result<Vec<Chunk>> {
@@ -163,11 +167,20 @@ impl Packet {
   }
 
   /// Same as [`Packet::from_bytes`][1] but only decrypts chunks signed with one of the valid keys.
-  /// 
+  ///
   ///  [1]: #method.from_bytes
-  pub(crate) fn from_signed_bytes(packet: &[u8], keys: &[SecretKey], sender_keys: &[PublicKey]) -> fail::Result<Vec<Chunk>> {
+  pub(crate) fn from_signed_bytes(
+    packet: &[u8],
+    keys: &[SecretKey],
+    sender_keys: &[PublicKey],
+  ) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
-      .map(|packet| packet.into_iter().map(|c| Chunk::decrypt_signed(c, keys, sender_keys)).collect())
+      .map(|packet| {
+        packet
+          .into_iter()
+          .map(|c| Chunk::decrypt_signed(c, keys, sender_keys))
+          .collect()
+      })
       .map_err(|_| fail::MesherFail::InvalidPacket)
   }
 }
