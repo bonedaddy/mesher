@@ -241,7 +241,7 @@ mod tests {
     assert_eq!(dec1[0], Chunk::Transport("hello".to_owned()));
     assert!(matches!(dec1[1], Chunk::Encrypted(_)));
 
-    let dec2 = Packet::from_signed_bytes(&packet, &[sk2], &[pks.clone()]).expect("Failed to deserialize packets");
+    let dec2 = Packet::from_signed_bytes(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
     assert!(matches!(dec2[0], Chunk::Encrypted(_)));
     assert_eq!(dec2[1], Chunk::Message(vec![1, 2, 3]));
   }
