@@ -6,6 +6,22 @@ lazy_static! {
   static ref PACKETS: Mutex<HashMap<String, Vec<Vec<u8>>>> = Mutex::new(HashMap::new());
 }
 
+/// A Transport implementation which "transports" data by storing and retrieving it from an in-memory store.
+/// 
+/// This is extremely useful when writing end-to-end tests which communicate through a mesher, if you don't want to rely on the stability of a real transport method.
+/// Except in extremely rare circumstances (e.g. out-of-memory, huge numbers of messages, threads dying unexpectedly), this mesher cannot fail.
+/// 
+/// Always use unique paths, even across tests, as the storage used is global.
+/// This is intentional, as it allows for tests which run multiple threads to simulate multiple meshers operating independently.
+/// 
+/// You should never use this struct directly. Instead, use it through [`Mesher`](../struct.Mesher.html), like any other transport:
+/// 
+/// ```no_run
+/// # use mesher::prelude::*;
+/// # let mut some_mesher = Mesher::unsigned(vec![]);
+/// some_mesher.add_transport::<mesher::debug_transports::InMemory>("inmem")
+///   .expect("Failed to add InMemory transport");
+/// ```
 #[allow(dead_code)]
 pub struct InMemory {
   listening: Vec<String>,

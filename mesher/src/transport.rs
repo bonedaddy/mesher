@@ -3,9 +3,10 @@ use crate::prelude::*;
 /// Transport is the core of mesher's communication system.
 ///
 /// All the ways that mesher can communicate are defined through this interface.
-/// It's deliberately left vague -- mesher doesn't care how the bytes are transported, and communication channels shouldn't care what bytes they're transporting.
-/// This ensures that typical transports can be reused across multiple versions of mesher without changes.
+/// It's deliberately left vague -- mesher doesn't care how the bytes are transported, and communication channels shouldn't care what bytes they're transporting, though they may have a maximum size.
+/// This ensures that transports can be reused across multiple versions of mesher without changes.
 /// It also ensures that transports can be largely reused for other projects which want to communicate over those methods.
+/// And, of course, it ensures that mesher can operate identically over any communication channel.
 pub trait Transport {
   /// Creates a new instance of this transport method, associated with the given scheme.
   /// This isn't meant to be called by the end user; it's used by mesher internally.
@@ -30,4 +31,3 @@ pub trait Transport {
   /// The paths to receive on are given through calls to [`Transport::listen`](/mesher/struct.Transport.html#tymethod.listen).
   fn receive(&mut self) -> fail::Result<Vec<Vec<u8>>>;
 }
-

@@ -1,7 +1,10 @@
-use {crate::prelude::*, std::collections::HashMap};
+//! Contains all the relevant bits and pieces for meshers themselves.
 
-#[derive(Debug)]
+use std::collections::HashMap;
+use crate::prelude::*;
+
 /// Represents a single message received by a mesher.
+#[derive(Debug)]
 pub struct Message {
   contents: Vec<u8>,
 }
@@ -15,8 +18,9 @@ impl Message {
 
 /// The control interface for a single mesher.
 ///
-/// One important thing to note is that the Mesher struct **only** stores keys.
-/// You will need to do responsible key management, e.g. storing them securely.
+/// One important thing to note is that the Mesher struct **only** stores keys during runtime.
+/// It does not manage them in any other way, e.g. keeping them securely on-disk, transmitting them securely to the computer, etc.
+/// (However, you could well use messages passed through mesher to handle some of it.)
 pub struct Mesher {
   transports: HashMap<String, Box<dyn Transport>>,
   own_skeys: Vec<SecretKey>,
@@ -26,7 +30,7 @@ pub struct Mesher {
 impl Mesher {
   /// Creates a mesher which expects incoming messages to be signed with one of the given keys.
   ///
-  /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
+  /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers' packets.
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   pub fn signed(own_skeys: Vec<SecretKey>, sender_pkeys: Vec<PublicKey>) -> Mesher {
