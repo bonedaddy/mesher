@@ -8,6 +8,8 @@
 
 // TODO: Replace with real crypto
 
+use rand::prelude::*;
+
 /// Some magic bytes to indicate if stuff is ours.
 /// Only used in this bad crypto impl; the real one will use authenticated encryption.
 const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
@@ -19,22 +21,12 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8);
 impl PublicKey {
-  /// **Insecurely** generate a public key, deterministically, based off a name.
-  ///
-  /// Unsafe because this is a **terrible** way to generate keys!
-  /// It's only good for demos -- e.g. the various examples, where proper key management would add too much complexity.
-  #[allow(clippy::missing_safety_doc)]
-  pub unsafe fn of(name: &str) -> PublicKey {
-    let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
-    PublicKey(sum)
-  }
-
   /// Encrypts a bunch of data with this public key.
   /// Only the associated secret key can decrypt it.
   ///
   /// The return value's format should be considered, by and large, a black box.
   /// Just pass it to [`SecretKey::decrypt`](struct.SecretKey.html#method.decrypt) to decrypt the message.
-  /// This ensures that the crypto can be upgraded without requiring any other code to change
+  /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
@@ -74,12 +66,56 @@ pub struct SecretKey(u8);
 impl SecretKey {
   /// **Insecurely** generate a secret key, deterministically, based off a name.
   ///
-  /// Unsafe because this is a **terrible** way to generate keys!
-  /// It's only good for demos -- e.g. the various examples.
-  #[allow(clippy::missing_safety_doc)]
+  /// This is meant to be a deterministic drop-in replacement for [`SecretKey::generate`](#method.generate).
+  /// 
+  /// # Safety
+  /// 
+  /// This function can **never** be cryptographically secure.
+  /// The only safe, secure way to generate keys is with a source of cryptographically secure randomness.
+  /// To generate a key safely, use [`SecretKey::generate`](#method.generate).
+  /// 
+  /// This method only exists because, while debugging or writing tests, broken (deterministic) keygen can be useful.
+  /// This particular method also preserves the name in the key data, for the same reason.
   pub unsafe fn of(name: &str) -> SecretKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     SecretKey(sum)
+  }
+
+  /// Securely generate a new secret key.
+  /// 
+  /// This function makes its best effort to be cryptographically secure by relying on the OS's CSRNG.
+  /// However, in certain (rare) circumstances, the OS's CSRNG may not actually be cryptographically secure, e.g. when not enough entropy is available.
+  /// 
+  /// In those cases, or when you want to load a stored key, use [`SecretKey::load`](#method.load).
+  /// 
+  /// To get the public key of the freshly generated key, use [`SecretKey::pkey`](#method.pkey).
+  pub fn generate() -> SecretKey {
+    SecretKey(thread_rng().next_u32() as u8)
+  }
+
+  /// Creates a key from raw material.
+  /// 
+  /// This method is meant to be used with [`SecretKey::material`](#method.material), to load stored keys that were previously securely generated.
+  /// 
+  /// To get the public key of the freshly loaded key, use [`SecretKey::pkey`](#method.pkey).
+  /// 
+  /// > **WARNING**:
+  /// > This method is dangerous if not used properly!
+  /// > Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
+  /// > Either make completely certain you fully understand the crypto being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
+  pub fn load(material: &[u8]) -> SecretKey {
+    SecretKey(material.iter().fold(0u8, |a, i| a.wrapping_add(*i)))
+  }
+
+  /// Gets the key material out of this key, so it can be e.g. stored.
+  /// 
+  /// Ideally, avoid using this method.
+  /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
+  /// You **must** know what you're doing, though!
+  /// 
+  /// You don't need to store the public key because it can be trivially recreated from the private key.
+  pub fn material(self) -> Vec<u8> {
+    vec![self.0]
   }
 
   /// Decrypts a bunch of data that was encrypted with the associated public key.
@@ -118,6 +154,12 @@ impl SecretKey {
   pub fn pkey(&self) -> PublicKey {
     PublicKey(self.0)
   }
+
+  /// Does the same thing as [`SecretKey::pkey`](#method.pkey) but returns a tuple of the two keys, which is ergonomically easier in some usages.
+  pub fn pair(self) -> (SecretKey, PublicKey) {
+    let pk = self.pkey();
+    (self, pk)
+  }
 }
 
 #[cfg(test)]
@@ -126,8 +168,7 @@ mod tests {
 
   #[test]
   fn encryption_decryptable() {
-    let pk = unsafe { PublicKey::of("crypt") };
-    let sk = unsafe { SecretKey::of("crypt") };
+    let (sk, pk) = SecretKey::generate().pair();
 
     let encd = pk.encrypt(&[1, 2, 3, 4]);
     let decd = sk.decrypt(&encd);
@@ -137,8 +178,7 @@ mod tests {
 
   #[test]
   fn signature_verifiable() {
-    let pk = unsafe { PublicKey::of("crypt") };
-    let sk = unsafe { SecretKey::of("crypt") };
+    let (sk, pk) = SecretKey::generate().pair();
 
     let signed = sk.sign(&[1, 2, 3, 4]);
     let veried = pk.verify(&signed);

@@ -4,36 +4,38 @@ use mesher_basic::TCP;
 use std::{thread::sleep, time::Duration};
 
 fn make_sender() -> Mesher {
-  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("sender") }]);
+  let mut m = Mesher::unsigned(vec![SecretKey::generate()]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m
 }
 
-fn make_bouncer() -> Mesher {
-  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("bouncer") }]);
+fn make_bouncer() -> (Mesher, PublicKey) {
+  let (sk, pk) = SecretKey::generate().pair();
+  let mut m = Mesher::unsigned(vec![sk]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m.listen_on("tcp:localhost:18550").expect("Failed to listen on port");
-  m
+  (m, pk)
 }
 
-fn make_receiver() -> Mesher {
-  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("receiver") }]);
+fn make_receiver() -> (Mesher, PublicKey) {
+  let (sk, pk) = SecretKey::generate().pair();
+  let mut m = Mesher::unsigned(vec![sk]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m.listen_on("tcp:localhost:18540").expect("Failed to listen on port");
-  m
+  (m, pk)
 }
 
 const MESSAGES: &[&str] = &["Hello", "This is a TCP demo", "Goodbye"];
 
 fn main() {
   let mut m1 = make_sender();
-  let mut mb = make_bouncer();
-  let mut m2 = make_receiver();
+  let (mut mb, mbk) = make_bouncer();
+  let (mut m2, m2k) = make_receiver();
 
   for message in MESSAGES {
     let packet = Packet::unsigned()
-      .add_message(message.as_bytes(), &unsafe { PublicKey::of("receiver") })
-      .add_hop("tcp:localhost:18540".to_owned(), &unsafe { PublicKey::of("bouncer") });
+      .add_message(message.as_bytes(), &m2k)
+      .add_hop("tcp:localhost:18540".to_owned(), &mbk);
     m1.launch(packet, "tcp:localhost:18550").expect("Faield to send");
     println!("Message sent: {}", message);
   }

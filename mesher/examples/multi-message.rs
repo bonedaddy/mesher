@@ -2,25 +2,29 @@ use mesher::prelude::*;
 use mesher::debug_transports::InMemory;
 
 fn main() {
-  let mut sender = Mesher::unsigned(vec![unsafe { SecretKey::of("s") }]);
+  let (send_sk, _) = unsafe { SecretKey::of("s") }.pair();
+  let (r1_sk, r1_pk) = unsafe { SecretKey::of("r1") }.pair();
+  let (r2_sk, r2_pk) = unsafe { SecretKey::of("r2") }.pair();
+
+  let mut sender = Mesher::unsigned(vec![send_sk]);
   sender
     .add_transport::<InMemory>("tcp")
     .expect("Failed to add transport");
-  let mut recvr1 = Mesher::unsigned(vec![unsafe { SecretKey::of("r1") }]);
+  let mut recvr1 = Mesher::unsigned(vec![r1_sk]);
   recvr1
     .add_transport::<InMemory>("tcp")
     .expect("Failed to add transport");
   recvr1.listen_on("tcp:localhost:18540").expect("Failed to listen");
-  let mut recvr2 = Mesher::unsigned(vec![unsafe { SecretKey::of("r2") }]);
+  let mut recvr2 = Mesher::unsigned(vec![r2_sk]);
   recvr2
     .add_transport::<InMemory>("tcp")
     .expect("Failed to add transport");
   recvr2.listen_on("tcp:localhost:18550").expect("Failed to listen");
 
   let packet = Packet::unsigned()
-    .add_message(&[1], &unsafe { PublicKey::of("r1") })
-    .add_message(&[2], &unsafe { PublicKey::of("r2") })
-    .add_hop("tcp:localhost:18550".to_owned(), &unsafe { PublicKey::of("r1") });
+    .add_message(&[1], &r1_pk)
+    .add_message(&[2], &r2_pk)
+    .add_hop("tcp:localhost:18550".to_owned(), &r1_pk);
 
   sender.launch(packet, "tcp:localhost:18540").expect("failed to launch");
 
