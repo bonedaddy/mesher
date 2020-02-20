@@ -66,16 +66,16 @@ pub struct SecretKey(u8);
 impl SecretKey {
   /// **Insecurely** generate a secret key, deterministically, based off a name.
   ///
-  /// This is meant to be a deterministic drop-in replacement for [`SecretKey::generate`](#method.generate).
-  /// 
   /// # Safety
   /// 
-  /// This function can **never** be cryptographically secure.
+  /// This function can **never** be cryptographically secure, and thus will never be "safe" to use.
   /// The only safe, secure way to generate keys is with a source of cryptographically secure randomness.
   /// To generate a key safely, use [`SecretKey::generate`](#method.generate).
   /// 
-  /// This method only exists because, while debugging or writing tests, broken (deterministic) keygen can be useful.
+  /// This method only exists because, while debugging or writing tests, broken (deterministic) keygen can be useful, and in those cases, safety isn't a concern.
   /// This particular method also preserves the name in the key data, for the same reason.
+  /// 
+  /// It's a drop-in, deterministic replacement for `SecretKey::generate`, so that you can swap it in and out easily for debugging.
   pub unsafe fn of(name: &str) -> SecretKey {
     let sum = name.as_bytes().iter().fold(0u8, |a, i| a.wrapping_add(*i));
     SecretKey(sum)
@@ -93,16 +93,15 @@ impl SecretKey {
     SecretKey(thread_rng().next_u32() as u8)
   }
 
-  /// Creates a key from raw material.
-  /// 
-  /// This method is meant to be used with [`SecretKey::material`](#method.material), to load stored keys that were previously securely generated.
+  /// Recreates a key from material gotten from [`SecretKey::material`](#method.material).
   /// 
   /// To get the public key of the freshly loaded key, use [`SecretKey::pkey`](#method.pkey).
   /// 
-  /// > **WARNING**:
-  /// > This method is dangerous if not used properly!
-  /// > Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
-  /// > Either make completely certain you fully understand the crypto being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
+  /// # WARNING
+  /// 
+  /// This method is dangerous if not used properly!
+  /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
+  /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
   pub fn load(material: &[u8]) -> SecretKey {
     SecretKey(material.iter().fold(0u8, |a, i| a.wrapping_add(*i)))
   }
