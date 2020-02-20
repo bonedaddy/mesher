@@ -15,9 +15,7 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 /// The public half of the keypair.
 ///
 /// It's used to *en*crypt things and check signatures.
-/// It can be automatically derived from the secret key with [`SecretKey::pkey`][1].
-///
-///  [1]: struct.SecretKey.html#method.pkey
+/// It can be automatically derived from the secret key with [`SecretKey::pkey`](struct.SecretKey.html#method.pkey).
 #[derive(Debug, Clone)]
 pub struct PublicKey(u8);
 impl PublicKey {
@@ -35,13 +33,11 @@ impl PublicKey {
   /// Only the associated secret key can decrypt it.
   ///
   /// The return value's format should be considered, by and large, a black box.
-  /// Just pass it to [`SecretKey::decrypt`][1] to decrypt the message.
+  /// Just pass it to [`SecretKey::decrypt`](struct.SecretKey.html#method.decrypt) to decrypt the message.
   /// This ensures that the crypto can be upgraded without requiring any other code to change
   ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
-  /// 
-  ///  [1]: struct.SecretKey.html#method.decrypt
   pub(crate) fn encrypt(&self, data: &[u8]) -> Vec<u8> {
     MAGIC
       .iter()
@@ -53,12 +49,10 @@ impl PublicKey {
   /// Checks that the message was signed by this PublicKey.
   /// 
   /// The input's format should be considered, by and large, a black box.
-  /// Just use what's returned by [`SecretKey::sign`][1]
+  /// Just use what's returned by [`SecretKey::sign`](struct.SecretKey.html#method.sign).
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// This returns a Result rather than a bool to help prevent unverified messages from being used accidentally.
-  /// 
-  ///  [1]: struct.SecretKey.html#method.sign
   pub(crate) fn verify(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
     let mut ciphertext = ciphertext.to_vec();
     let sig = ciphertext.pop().ok_or(())?;
@@ -74,9 +68,7 @@ impl PublicKey {
 ///
 /// It's used to *de*crypt things and create signatures.
 ///
-/// The public half can be derived with [`SecretKey::pkey`][1].
-///
-///  [1]: #method.pkey
+/// The public half can be derived with [`SecretKey::pkey`](#method.pkey).
 #[derive(Debug, Clone)]
 pub struct SecretKey(u8);
 impl SecretKey {
@@ -94,13 +86,11 @@ impl SecretKey {
   /// If it doesn't seem to actually be targeting this secret key, returns Err(())
   ///
   /// The input's format should be considered, by and large, a black box.
-  /// Just use what's returned by [`PublicKey::encrypt`][1].
+  /// Just use what's returned by [`PublicKey::encrypt`](struct.PublicKey.html#method.encrypt).
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
-  ///
-  ///  [1]: struct.PublicKey.html#method.encrypt
   pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
     let mut dec: Vec<_> = ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect();
     if &dec[0..4] != MAGIC {
@@ -113,12 +103,10 @@ impl SecretKey {
   /// Signs this message with the given secret key.
   /// 
   /// The return value's format should be considered, by and large, a black box.
-  /// Just pass it to [`PublicKey::verify`][1] to check the signature.
+  /// Just pass it to [`PublicKey::verify`](struct.PublicKey.html#method.verify) to check the signature.
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// This returns an Option to help ensure that the message can't be accidentally taken without ensuring a valid signature.
-  /// 
-  ///  [1]: struct.PublicKey.html#method.verify
   pub(crate) fn sign(&self, data: &[u8]) -> Vec<u8> {
     let sig = data.iter().fold(0u8, |a, i| a.wrapping_add(*i)).wrapping_add(self.0);
     let mut res = data.to_vec();

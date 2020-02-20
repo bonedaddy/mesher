@@ -3,9 +3,7 @@ use crate::prelude::*;
 /// One piece of a packet.
 #[derive(Debug, PartialEq)]
 pub(crate) enum Chunk {
-  /// A message to pass back to the [`Mesher`][1]
-  ///
-  ///  [1]: ../struct.Mesher.html
+  /// A message to pass back to the [`Mesher`](../struct.Mesher.html)
   Message(Vec<u8>),
   /// A path to send this packet along
   Transport(String),
@@ -32,10 +30,8 @@ impl Chunk {
     }
   }
 
-  /// Converts a series of bytes from [`Chunk::serialize`][1] back to a Chunk, if possible.
+  /// Converts a series of bytes from [`Chunk::serialize`](#method.serialize) back to a Chunk, if possible.
   /// Best considered a black box, so it can change freely.
-  ///
-  ///  [1]: #method.serialize
   fn deserialize(mut from: Vec<u8>) -> Result<Chunk, ()> {
     match from.get(0) {
       Some(0) => Ok(Chunk::Message(from.drain(1..).collect())),
@@ -49,29 +45,22 @@ impl Chunk {
   /// Convert this chunk to a raw byte form, then encrypt those to the public key.
   ///
   /// Should be considered a black box, as the format may change in the future.
-  /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`][1]
-  ///
-  ///  [1]: #method.decrypt
+  /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`](#method.decrypt)
   fn encrypt(self, target_key: PublicKey) -> Vec<u8> {
     target_key.encrypt(&self.serialize())
   }
 
-  /// Same as [`Chunk::encrypt`][1], but will also sign with the sender key.
-  ///
-  ///  [1]: #method.encrypt
+  /// Same as [`Chunk::encrypt`](#method.encrypt), but will also sign with the sender key.
   fn encrypt_and_sign(self, target_key: PublicKey, sender_key: &SecretKey) -> Vec<u8> {
     sender_key.sign(&target_key.encrypt(&self.serialize()))
   }
 
   /// Decrypt a chunk of bytes with all of our keys.
   /// Returns the chunk decrypted with the first key that worked.
-  /// If none of them work, returns [`Chunk::Encrypted`][1].
+  /// If none of them work, returns [`Chunk::Encrypted`](#variant.Encrypted).
   ///
   /// Expect the input format to this to be a black box.
-  /// Give it things encrypted with [`Chunk::encrypt`][2].
-  ///
-  ///  [1]: #variant.Encrypted
-  ///  [2]: #method.encrypt
+  /// Give it things encrypted with [`Chunk::encrypt`](#method.encrypt).
   fn decrypt(bytes: Vec<u8>, keys: &[SecretKey]) -> Chunk {
     for key in keys {
       if let Ok(dec) = key.decrypt(&bytes) {
@@ -83,7 +72,7 @@ impl Chunk {
     Chunk::Encrypted(bytes)
   }
 
-  /// Same as [`Chunk::decrypt`][1] but will check signatures against the list of signing keys.
+  /// Same as [`Chunk::decrypt`](#method.decrypt) but will check signatures against the list of signing keys.
   fn decrypt_signed(bytes: Vec<u8>, enc_keys: &[SecretKey], sign_keys: &[PublicKey]) -> Chunk {
     let veried = match sign_keys.iter().find_map(|k| k.verify(&bytes).ok()) {
       Some(v) => v,
@@ -155,21 +144,16 @@ impl Packet {
   /// Given a packet and all of our secret keys, decrypt as many chunks as possible.
   ///
   /// No error is raised if no chunks could be decrypted; you just get a Vec entirely
-  /// composed of [`Chunk::Encrypted`][1].
+  /// composed of [`Chunk::Encrypted`](enum.Chunk.html#variant.Encrypted).
   ///
-  /// See [`Chunk::decrypt`][2] for more information.
-  ///
-  ///  [1]: enum.Chunk.html#variant.Encrypted
-  ///  [2]: enum.Chunk.html#method.decrypt
+  /// See [`Chunk::decrypt`](enum.Chunk.html#method.decrypt) for more information.
   pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
       .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
       .map_err(|_| fail::MesherFail::InvalidPacket)
   }
 
-  /// Same as [`Packet::from_bytes`][1] but only decrypts chunks signed with one of the valid keys.
-  ///
-  ///  [1]: #method.from_bytes
+  /// Same as [`Packet::from_bytes`](#method.from_bytes) but only decrypts chunks signed with one of the valid keys.
   pub(crate) fn from_signed_bytes(
     packet: &[u8],
     keys: &[SecretKey],

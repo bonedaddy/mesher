@@ -27,9 +27,7 @@ pub trait Transport {
   /// Actually receive the pending messages.
   /// In listen-based transports, this will simply pull the received messages from the listener.
   /// In poll-based ones, it will actually perform the poll.
-  /// The paths to receive on are given through calls to [`Transport::listen`][1]
-  ///
-  ///  [1]: #tymethod.listen
+  /// The paths to receive on are given through calls to [`Transport::listen`](/mesher/struct.Transport.html#tymethod.listen).
   fn receive(&mut self) -> fail::Result<Vec<Vec<u8>>>;
 }
 
