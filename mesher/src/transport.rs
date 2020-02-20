@@ -31,6 +31,3 @@ pub trait Transport {
   fn receive(&mut self) -> fail::Result<Vec<Vec<u8>>>;
 }
 
-mod debug {
-
-}
