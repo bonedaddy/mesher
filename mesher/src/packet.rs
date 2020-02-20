@@ -186,8 +186,8 @@ mod tests {
 
   #[test]
   fn unsigned_serialized_deserializable() {
-    let (sk1, pk1) = unsafe { SecretKey::of("crypt1") }.pair();
-    let (sk2, pk2) = unsafe { SecretKey::of("crypt2") }.pair();
+    let (sk1, pk1) = SecretKey::generate().pair();
+    let (sk2, pk2) = SecretKey::generate().pair();
 
     let packet = Packet::unsigned()
       .add_hop("hello".to_owned(), &pk1)
@@ -206,9 +206,9 @@ mod tests {
 
   #[test]
   fn signed_serialized_deserializable() {
-    let (sks, pks) = unsafe { SecretKey::of("crypts") }.pair();
-    let (sk1, pk1) = unsafe { SecretKey::of("crypt1") }.pair();
-    let (sk2, pk2) = unsafe { SecretKey::of("crypt2") }.pair();
+    let (sks, pks) = SecretKey::generate().pair();
+    let (sk1, pk1) = SecretKey::generate().pair();
+    let (sk2, pk2) = SecretKey::generate().pair();
 
     let packet = Packet::signed(sks)
       .add_hop("hello".to_owned(), &pk1)

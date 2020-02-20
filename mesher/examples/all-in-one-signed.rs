@@ -2,7 +2,7 @@ use mesher::prelude::*;
 use mesher::debug_transports::InMemory;
 
 fn make_mesher(name: &str, sender_pkey: &PublicKey) -> (Mesher, PublicKey) {
-  let (sk, pk) = unsafe { SecretKey::of(name) }.pair();
+  let (sk, pk) = SecretKey::generate().pair();
   let mut m = Mesher::signed(vec![sk], vec![sender_pkey.clone()]);
   m.add_transport::<InMemory>("mock")
     .expect("failed to add mock");
@@ -11,7 +11,7 @@ fn make_mesher(name: &str, sender_pkey: &PublicKey) -> (Mesher, PublicKey) {
 }
 
 fn main() {
-  let (signer_skey, signer_pkey) = unsafe { SecretKey::of("signer") }.pair();
+  let (signer_skey, signer_pkey) = SecretKey::generate().pair();
 
   let (mut m_root, _) = make_mesher("root", &signer_pkey);
   let (mut m_n1, k_n1) = make_mesher("n1", &signer_pkey);

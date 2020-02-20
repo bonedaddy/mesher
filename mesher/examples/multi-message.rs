@@ -2,9 +2,9 @@ use mesher::prelude::*;
 use mesher::debug_transports::InMemory;
 
 fn main() {
-  let (send_sk, _) = unsafe { SecretKey::of("s") }.pair();
-  let (r1_sk, r1_pk) = unsafe { SecretKey::of("r1") }.pair();
-  let (r2_sk, r2_pk) = unsafe { SecretKey::of("r2") }.pair();
+  let (send_sk, _) = SecretKey::generate().pair();
+  let (r1_sk, r1_pk) = SecretKey::generate().pair();
+  let (r2_sk, r2_pk) = SecretKey::generate().pair();
 
   let mut sender = Mesher::unsigned(vec![send_sk]);
   sender
