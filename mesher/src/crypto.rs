@@ -18,7 +18,7 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 ///
 /// It's used to *en*crypt things and check signatures.
 /// It can be automatically derived from the secret key with [`SecretKey::pkey`](struct.SecretKey.html#method.pkey).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PublicKey(u8);
 impl PublicKey {
   /// Encrypts a bunch of data with this public key.
@@ -61,7 +61,7 @@ impl PublicKey {
 /// It's used to *de*crypt things and create signatures.
 ///
 /// The public half can be derived with [`SecretKey::pkey`](#method.pkey).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SecretKey(u8);
 impl SecretKey {
   /// **Insecurely** generate a secret key, deterministically, based off a name.
@@ -169,7 +169,8 @@ mod tests {
   fn encryption_decryptable() {
     let (sk, pk) = SecretKey::generate().pair();
 
-    let encd = pk.encrypt(&[1, 2, 3, 4]);
+    let data = vec![1, 2, 3, 4];
+    let encd = pk.encrypt(&data);
     let decd = sk.decrypt(&encd);
 
     assert_eq!(Ok(vec![1, 2, 3, 4]), decd);
@@ -179,9 +180,39 @@ mod tests {
   fn signature_verifiable() {
     let (sk, pk) = SecretKey::generate().pair();
 
-    let signed = sk.sign(&[1, 2, 3, 4]);
+    let data = vec![1, 2, 3, 4];
+    let signed = sk.sign(&data);
     let veried = pk.verify(&signed);
 
     assert_eq!(Ok(vec![1, 2, 3, 4]), veried);
+  }
+
+  #[test]
+  fn encrypt_and_sign() {
+    let (sks, pks) = SecretKey::generate().pair();
+    let (skr, pkr) = SecretKey::generate().pair();
+
+    let data = vec![1, 2, 3, 4];
+    let encd = pkr.encrypt(&data);
+    let signed = sks.sign(&encd);
+    let out = pks.verify(&signed).and_then(|v| skr.decrypt(&v));
+    assert_eq!(Ok(data), out);
+  }
+
+  #[test]
+  fn of_deterministic() {
+    let sk1 = unsafe { SecretKey::of("some string") };
+    let sk2 = unsafe { SecretKey::of("some string") };
+    assert_eq!(sk1, sk2);
+  }
+
+  #[test]
+  #[should_panic] // TODO: Fix the crypto and remove this
+  fn enc_nondeterministic() {
+    let pk = SecretKey::generate().pkey();
+    let data = &[1, 2, 3, 4];
+    let out1 = pk.encrypt(data);
+    let out2 = pk.encrypt(data);
+    assert_ne!(out1, out2);
   }
 }
