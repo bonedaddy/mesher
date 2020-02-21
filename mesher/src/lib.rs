@@ -1,21 +1,9 @@
 #![warn(clippy::all)]
 #![doc(test(attr(deny(warnings))))]
 
-//! Mesher is a fairly simple wrapper over a fairly complex concept:
-//! Securely and anonymously sending a message over a heterogeneously connected mesh network.
-//! 
-//! In smaller, more real words, mesher:
-//! 
-//! - Operates on mesh networks
-//! - Allows nodes to be connected through a variety of channels (heterogeneous, not homogeneous)
-//! - Prevents intermediate nodes from knowing the source or destination
-//! - Prevents intermediate nodes from knowing the contents of the message
-//! 
-//! It's primarily desigend for anonymous, one-way communication.
-//! However, replies facilitate round-trip communications, which in turn can be used to make a tunnel.
-//! 
-//! For more information on the concepts underlying this library, see [the project repo's README](https://github.com/nic-hartley/mesher/blob/master/README.md).
-//! The rest of this API documentation assumes you've read and understood it.
+//! For information on the concepts underlying this library, see [the project repo's README](https://github.com/nic-hartley/mesher/blob/master/README.md).
+//! The rest of this API documentation assumes you've read and understood it, and won't explain them.
+//! The README is also available at the root of the repo, as is standard.
 //! 
 //! The mesher API is fairly simple, and based around three pieces, which reflect the concepts described in the README:
 //! 
