@@ -21,6 +21,30 @@ const MAGIC: &[u8] = &[0x6d, 0x65, 0x73, 0x68]; // "mesh" in ASCII
 #[derive(Debug, Clone, PartialEq)]
 pub struct PublicKey(u8);
 impl PublicKey {
+  /// Recreates a key from material gotten from [`PublicKey::material`](#method.material).
+  /// 
+  /// # WARNING
+  /// 
+  /// This method is dangerous if not used properly!
+  /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
+  /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](struct.SecretKey.html#method.generate) to produce new keys, and [`SecretKey::pkey`](struct.SecretKey.html#method.pkey) to get the public key.
+  pub fn load(material: [u8; 32]) -> PublicKey {
+    PublicKey(material.iter().fold(0u8, |a, i| a.wrapping_add(*i)))
+  }
+
+  /// Gets the key material out of this key, so it can be stored.
+  /// 
+  /// Ideally, avoid using this method.
+  /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
+  /// You **must** know what you're doing, though!
+  /// 
+  /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
+  pub fn material(self) -> [u8; 32] {
+    let mut a = [0; 32];
+    a[0] = self.0;
+    a
+  }
+
   /// Encrypts a bunch of data with this public key.
   /// Only the associated secret key can decrypt it.
   ///
@@ -102,19 +126,32 @@ impl SecretKey {
   /// This method is dangerous if not used properly!
   /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
   /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
-  pub fn load(material: &[u8]) -> SecretKey {
+  pub fn load(material: [u8; 32]) -> SecretKey {
     SecretKey(material.iter().fold(0u8, |a, i| a.wrapping_add(*i)))
   }
 
-  /// Gets the key material out of this key, so it can be e.g. stored.
+  /// Gets the key material out of this key, so it can be stored.
   /// 
   /// Ideally, avoid using this method.
   /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
   /// You **must** know what you're doing, though!
   /// 
   /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
-  pub fn material(self) -> Vec<u8> {
-    vec![self.0]
+  pub fn material(self) -> [u8; 32] {
+    let mut a = [0; 32];
+    a[0] = self.0;
+    a
+  }
+
+  /// Derive the public half of the keypair based on the secret key.
+  pub fn pkey(&self) -> PublicKey {
+    PublicKey(self.0)
+  }
+
+  /// Does the same thing as [`SecretKey::pkey`](#method.pkey) but returns a tuple of the two keys, which is ergonomically easier in some usages.
+  pub fn pair(self) -> (SecretKey, PublicKey) {
+    let pk = self.pkey();
+    (self, pk)
   }
 
   /// Decrypts a bunch of data that was encrypted with the associated public key.
@@ -147,17 +184,6 @@ impl SecretKey {
     let mut res = data.to_vec();
     res.push(sig);
     res
-  }
-
-  /// Derive the public half of the keypair based on the secret key.
-  pub fn pkey(&self) -> PublicKey {
-    PublicKey(self.0)
-  }
-
-  /// Does the same thing as [`SecretKey::pkey`](#method.pkey) but returns a tuple of the two keys, which is ergonomically easier in some usages.
-  pub fn pair(self) -> (SecretKey, PublicKey) {
-    let pk = self.pkey();
-    (self, pk)
   }
 }
 
