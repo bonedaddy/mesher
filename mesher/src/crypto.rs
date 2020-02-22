@@ -241,4 +241,20 @@ mod tests {
     let out2 = pk.encrypt(data);
     assert_ne!(out1, out2);
   }
+
+  #[test]
+  fn sk_save_load() {
+    let sk = SecretKey::generate();
+    let saved = sk.clone().material();
+    let loaded = SecretKey::load(saved);
+    assert_eq!(sk, loaded);
+  }
+
+  #[test]
+  fn pk_save_load() {
+    let pk = SecretKey::generate().pkey();
+    let saved = pk.clone().material();
+    let loaded = PublicKey::load(saved);
+    assert_eq!(pk, loaded);
+  }
 }
