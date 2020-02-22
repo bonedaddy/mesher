@@ -20,18 +20,19 @@ In smaller, more real words, mesher:
 It's primarily designed for anonymous, one-way communication.
 However, replies facilitate round-trip communications, which in turn can be used to make a tunnel.
 
+## TODO
+
+- Finish **§ Overview**
+- Write **§ Versioning**, **§ Usage**, and **§ Structure**
+- Make sure **§ Crypto** makes sense at all
+
 ## Overview
 
 Mesher sends messages across mesh networks.
 It does this by creating packets, then bouncing them between nodes.
 The packets are made up of encrypted instructions
 
-## Using mesher
-
-- `#![no_std]`
-- 
-
-## Crypto details
+## Crypto
 
 If you plan to vet this for production usage which depends on the cryptographic strength, I recommend vetting the code directly.
 This will ensure that any inaccurate descriptions here don't affect the vetting.
@@ -98,7 +99,6 @@ This is possible with a compromised OS, but mesher explicitly does not include t
 
 Every time a nonce is needed, this global nonce is incremented atomically.
 Because mesher isn't expected to be generating nonces more than a billion times a second, on a non-malicious system, this will most likely never reuse a nonce: the starting nonce for a given time should always be "further ahead" than the current global nonce.
-
 
 #### Encryption and decryption
 
