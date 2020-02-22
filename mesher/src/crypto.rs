@@ -112,7 +112,7 @@ impl SecretKey {
   /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
   /// You **must** know what you're doing, though!
   /// 
-  /// You don't need to store the public key because it can be trivially recreated from the private key.
+  /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
   pub fn material(self) -> Vec<u8> {
     vec![self.0]
   }
