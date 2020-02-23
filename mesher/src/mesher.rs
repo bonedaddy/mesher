@@ -1,7 +1,7 @@
 //! Contains all the relevant bits and pieces for meshers themselves.
 
-use std::collections::HashMap;
 use crate::prelude::*;
+use std::collections::HashMap;
 
 /// Represents a single message received by a mesher.
 #[derive(Debug)]

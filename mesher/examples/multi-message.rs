@@ -1,5 +1,5 @@
-use mesher::prelude::*;
 use mesher::debug_transports::InMemory;
+use mesher::prelude::*;
 
 fn main() {
   let (send_sk, _) = SecretKey::generate().pair();

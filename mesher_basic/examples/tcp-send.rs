@@ -9,7 +9,7 @@ fn get_pkey(s: &str) -> Result<PublicKey, &'static str> {
   }
   let mut bytes = [0; 32];
   for i in (0..64).step_by(2) {
-    bytes[i/2] = u8::from_str_radix(&s[i..i+2], 16).expect("Invalid hex");
+    bytes[i / 2] = u8::from_str_radix(&s[i..i + 2], 16).expect("Invalid hex");
   }
   Ok(PublicKey::load(bytes))
 }
@@ -30,10 +30,7 @@ fn main() {
   println!("\n---\nSending {} bytes...", data.len());
   let mut m = Mesher::unsigned(vec![SecretKey::generate()]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
-  m.launch(
-    Packet::unsigned().add_message(&data, &pkey),
-    &format!("tcp:{}", sock),
-  )
-  .expect("Failed to send data");
+  m.launch(Packet::unsigned().add_message(&data, &pkey), &format!("tcp:{}", sock))
+    .expect("Failed to send data");
   println!("Sent! Did you see it get received?");
 }

@@ -7,15 +7,15 @@ lazy_static! {
 }
 
 /// A Transport implementation which "transports" data by storing and retrieving it from an in-memory store.
-/// 
+///
 /// This is extremely useful when writing end-to-end tests which communicate through a mesher, if you don't want to rely on the stability of a real transport method.
 /// Except in extremely rare circumstances (e.g. out-of-memory, huge numbers of messages, threads dying unexpectedly), this mesher cannot fail.
-/// 
+///
 /// Always use unique paths, even across tests, as the storage used is global.
 /// This is intentional, as it allows for tests which run multiple threads to simulate multiple meshers operating independently.
-/// 
+///
 /// You should never use this struct directly. Instead, use it through [`Mesher`](../struct.Mesher.html), like any other transport:
-/// 
+///
 /// ```no_run
 /// # use mesher::prelude::*;
 /// # let mut some_mesher = Mesher::unsigned(vec![]);
@@ -94,7 +94,8 @@ mod tests {
   fn send_and_receive_out_of_order() {
     let mut t = InMemory::new("inmem").expect("Failed to create");
 
-    t.send("inmem:3".to_owned(), vec![9, 10, 11, 12]).expect("Failed to send");
+    t.send("inmem:3".to_owned(), vec![9, 10, 11, 12])
+      .expect("Failed to send");
     t.listen("inmem:3".to_owned()).expect("Failed to listen");
     let recvd = t.receive().expect("Failed to receive");
     assert_eq!(recvd, vec![vec![9, 10, 11, 12]]);

@@ -2,18 +2,22 @@
 //! **WARNING**: Currently intentionally very broken!
 //! This crypto is NOT SECURE and should not be used in production!
 //! It's intentionally easy to break so that if I need to, while debugging, I can.
-//! 
+//!
 //! While this is a nicer, easier-to-use wrapper around crypto primitives, using it still requires you to understand how public-key crypto works.
 //! For example, if you don't know the security guarantees provided by encryption vs. signing, **do not use this wrapper**.
 
-use std::{fmt, sync::{Arc, Mutex}, time::SystemTime};
-use rand::prelude::*;
 use ed25519_dalek as ed;
-use x25519_dalek as x;
+use rand::prelude::*;
 use ring::aead::{self, BoundKey};
+use std::{
+  fmt,
+  sync::{Arc, Mutex},
+  time::SystemTime,
+};
+use x25519_dalek as x;
 
 lazy_static! {
-  static ref current: Arc<Mutex<u128>> = {
+  static ref CURRENT: Arc<Mutex<u128>> = {
     let val = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
       Ok(dur) => dur.as_nanos(),
       Err(_) => {
@@ -28,7 +32,7 @@ lazy_static! {
 
 fn next_nonce() -> [u8; 12] {
   let val = {
-    let mut d = current.lock().expect("Lock poisoned?");
+    let mut d = CURRENT.lock().expect("Lock poisoned?");
     *d += 1;
     d
   };
@@ -38,7 +42,7 @@ fn next_nonce() -> [u8; 12] {
   bytes_12
 }
 
-struct SingleNonce{
+struct SingleNonce {
   nonce_bytes: [u8; 12],
   to_serve: bool,
 }
@@ -71,9 +75,9 @@ impl aead::NonceSequence for SingleNonce {
 pub struct PublicKey(x::PublicKey);
 impl PublicKey {
   /// Recreates a key from material gotten from [`PublicKey::material`](#method.material).
-  /// 
+  ///
   /// # WARNING
-  /// 
+  ///
   /// This method is dangerous if not used properly!
   /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
   /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](struct.SecretKey.html#method.generate) to produce new keys, and [`SecretKey::pkey`](struct.SecretKey.html#method.pkey) to get the public key.
@@ -82,11 +86,11 @@ impl PublicKey {
   }
 
   /// Gets the key material out of this key, so it can be stored.
-  /// 
+  ///
   /// Ideally, avoid using this method.
   /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
   /// You **must** know what you're doing, though!
-  /// 
+  ///
   /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
   pub fn material(self) -> [u8; 32] {
     *self.0.as_bytes()
@@ -113,7 +117,9 @@ impl PublicKey {
 
     let mut cipher = data.to_vec();
     // TODO: Put Rp_bytes in AAD
-    key.seal_in_place_append_tag(aead::Aad::empty(), &mut cipher).expect("what error could this possibly be??");
+    key
+      .seal_in_place_append_tag(aead::Aad::empty(), &mut cipher)
+      .expect("what error could this possibly be??");
     let mut out = Vec::with_capacity(32 /* rp */ + 12 /* nonce */ + cipher.len());
     out.extend_from_slice(rp.as_bytes());
     out.extend_from_slice(&nonce);
@@ -122,7 +128,7 @@ impl PublicKey {
   }
 
   /// Checks that the message was signed by this PublicKey.
-  /// 
+  ///
   /// The input's format should be considered, by and large, a black box.
   /// Just use what's returned by [`SecretKey::sign`](struct.SecretKey.html#method.sign).
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
@@ -141,7 +147,11 @@ impl PartialEq for PublicKey {
 
 impl fmt::Debug for PublicKey {
   fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-    let hex = self.0.as_bytes().iter().fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
+    let hex = self
+      .0
+      .as_bytes()
+      .iter()
+      .fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
     write!(fmt, "PublicKey({})", hex)
   }
 }
@@ -155,12 +165,12 @@ impl fmt::Debug for PublicKey {
 pub struct SecretKey(x::StaticSecret);
 impl SecretKey {
   /// Securely generate a new secret key.
-  /// 
+  ///
   /// This function makes its best effort to be cryptographically secure by relying on the OS's CSRNG.
   /// However, in certain (rare) circumstances, the OS's CSRNG may not actually be cryptographically secure, e.g. when not enough entropy is available.
-  /// 
+  ///
   /// In those cases, or when you want to load a stored key, use [`SecretKey::load`](#method.load).
-  /// 
+  ///
   /// To get the public key of the freshly generated key, use [`SecretKey::pkey`](#method.pkey).
   pub fn generate() -> SecretKey {
     let edgen = ed::SecretKey::generate(&mut thread_rng()).to_bytes();
@@ -169,11 +179,11 @@ impl SecretKey {
   }
 
   /// Recreates a key from material gotten from [`SecretKey::material`](#method.material).
-  /// 
+  ///
   /// To get the public key of the freshly loaded key, use [`SecretKey::pkey`](#method.pkey).
-  /// 
+  ///
   /// # WARNING
-  /// 
+  ///
   /// This method is dangerous if not used properly!
   /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
   /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
@@ -182,11 +192,11 @@ impl SecretKey {
   }
 
   /// Gets the key material out of this key, so it can be stored.
-  /// 
+  ///
   /// Ideally, avoid using this method.
   /// However, in some applications (e.g. servers with published public keys) it's extremely useful or even necessary to keep using the same key, so if you need to "export" a `SecretKey`, this will allow you to.
   /// You **must** know what you're doing, though!
-  /// 
+  ///
   /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
   pub fn material(self) -> [u8; 32] {
     self.0.to_bytes()
@@ -234,12 +244,12 @@ impl SecretKey {
     let mut ciphertext = ciphertext.to_vec();
     match key.open_in_place(aead::Aad::empty(), &mut ciphertext) {
       Ok(plain) => Ok(plain.to_vec()),
-      Err(_) => Err(())
+      Err(_) => Err(()),
     }
   }
 
   /// Signs this message with the given secret key.
-  /// 
+  ///
   /// The return value's format should be considered, by and large, a black box.
   /// Just pass it to [`PublicKey::verify`](struct.PublicKey.html#method.verify) to check the signature.
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
@@ -258,7 +268,11 @@ impl PartialEq for SecretKey {
 
 impl fmt::Debug for SecretKey {
   fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-    let hex = self.0.to_bytes().iter().fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
+    let hex = self
+      .0
+      .to_bytes()
+      .iter()
+      .fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
     write!(fmt, "PublicKey({})", hex)
   }
 }
