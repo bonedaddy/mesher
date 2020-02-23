@@ -126,3 +126,7 @@ Verification involves just removing the last 64 bytes of the ciphertext and chec
 
 The only major thing to note is that verification is done with `ed25519_dalek::PublicKey::verify_strict`, rather than the normal `verify` method.
 See [A Note on Signature Malleability](https://github.com/dalek-cryptography/ed25519-dalek#a-note-on-signature-malleability) for more information.
+
+#### Key conversion
+
+
