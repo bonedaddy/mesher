@@ -223,7 +223,7 @@ impl SecretKey {
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
   pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
-    if ciphertext.len() < 32 {
+    if ciphertext.len() < (32 + 12) {
       return Err(());
     }
 
