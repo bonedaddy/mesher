@@ -6,20 +6,15 @@
 //! While this is a nicer, easier-to-use wrapper around crypto primitives, using it still requires you to understand how public-key crypto works.
 //! For example, if you don't know the security guarantees provided by encryption vs. signing, **do not use this wrapper**.
 
-use std::{sync::{Arc, Mutex}, fmt};
+use std::{fmt, sync::{Arc, Mutex}, time::SystemTime};
 use rand::prelude::*;
 use ed25519_dalek as ed;
 use x25519_dalek as x;
 use ring::aead::{self, BoundKey};
 
-#[derive(Clone)]
-struct NonceGen {
-  current: Arc<Mutex<u128>>,
-}
-
-impl NonceGen {
-  fn new() -> NonceGen {
-    let val = match std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH) {
+lazy_static! {
+  static ref current: Arc<Mutex<u128>> = {
+    let val = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
       Ok(dur) => dur.as_nanos(),
       Err(_) => {
         let top = (thread_rng().next_u64() as u128) << 64;
@@ -27,29 +22,45 @@ impl NonceGen {
         top | bot
       }
     };
-    NonceGen {
-      current: Arc::new(Mutex::new(val))
+    Arc::new(Mutex::new(val))
+  };
+}
+
+fn next_nonce() -> [u8; 12] {
+  let val = {
+    let mut d = current.lock().expect("Lock poisoned?");
+    *d += 1;
+    d
+  };
+  let bytes = val.to_le_bytes();
+  let mut bytes_12 = [0; 12];
+  bytes_12.copy_from_slice(&bytes[0..12]);
+  bytes_12
+}
+
+struct SingleNonce{
+  nonce_bytes: [u8; 12],
+  to_serve: bool,
+}
+
+impl From<[u8; 12]> for SingleNonce {
+  fn from(n: [u8; 12]) -> SingleNonce {
+    SingleNonce {
+      nonce_bytes: n,
+      to_serve: true,
     }
   }
 }
 
-impl aead::NonceSequence for NonceGen {
+impl aead::NonceSequence for SingleNonce {
   fn advance(&mut self) -> Result<aead::Nonce, ring::error::Unspecified> {
-    let val = {
-      let mut d = self.current.lock().map_err(|_| ring::error::Unspecified)?;
-      *d += 1;
-      d
-    };
-    let bytes = val.to_le_bytes();
-    let mut bytes_12 = [0; 12];
-    bytes_12.copy_from_slice(&bytes[0..12]);
-    let nonce = aead::Nonce::assume_unique_for_key(bytes_12);
-    Ok(nonce)
+    if self.to_serve {
+      self.to_serve = false;
+      Ok(aead::Nonce::assume_unique_for_key(self.nonce_bytes))
+    } else {
+      Err(ring::error::Unspecified)
+    }
   }
-}
-
-lazy_static! {
-  static ref NONCE_GEN: NonceGen = NonceGen::new();
 }
 
 /// The public half of the keypair.
@@ -96,14 +107,18 @@ impl PublicKey {
     let rp = x::PublicKey::from(&rs);
     let s = rs.diffie_hellman(&self.0);
 
-    let mut key = aead::SealingKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched"), (*NONCE_GEN).clone());
+    let nonce = next_nonce();
+    let ukey = aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched");
+    let mut key = aead::SealingKey::new(ukey, SingleNonce::from(nonce));
 
     let mut cipher = data.to_vec();
     // TODO: Put Rp_bytes in AAD
     key.seal_in_place_append_tag(aead::Aad::empty(), &mut cipher).expect("what error could this possibly be??");
-    let mut rp_bytes = rp.as_bytes().to_vec();
-    rp_bytes.append(&mut cipher);
-    rp_bytes
+    let mut out = Vec::with_capacity(32 /* rp */ + 12 /* nonce */ + cipher.len());
+    out.extend_from_slice(rp.as_bytes());
+    out.extend_from_slice(&nonce);
+    out.append(&mut cipher);
+    out
   }
 
   /// Checks that the message was signed by this PublicKey.
@@ -202,18 +217,25 @@ impl SecretKey {
       return Err(());
     }
 
-    let (rp_byte_slice, ciphertext) = ciphertext.split_at(32);
+    let (rp_slice, ciphertext) = ciphertext.split_at(32);
+    let (nonce_slice, ciphertext) = ciphertext.split_at(12);
+
     let mut rp_bytes = [0u8; 32];
-    rp_bytes.copy_from_slice(rp_byte_slice);
+    rp_bytes.copy_from_slice(rp_slice);
     let rp = x::PublicKey::from(rp_bytes);
     let s = self.0.diffie_hellman(&rp);
 
-    let mut key = aead::OpeningKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched"), NONCE_GEN.clone());
+    let mut nonce_bytes = [0u8; 12];
+    nonce_bytes.copy_from_slice(nonce_slice);
+
+    let ukey = aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched");
+    let mut key = aead::OpeningKey::new(ukey, SingleNonce::from(nonce_bytes));
 
     let mut ciphertext = ciphertext.to_vec();
-    key.open_in_place(aead::Aad::empty(), &mut ciphertext).map_err(|_| ())?;
-
-    Ok(ciphertext) // freshly decrypted
+    match key.open_in_place(aead::Aad::empty(), &mut ciphertext) {
+      Ok(plain) => Ok(plain.to_vec()),
+      Err(_) => Err(())
+    }
   }
 
   /// Signs this message with the given secret key.

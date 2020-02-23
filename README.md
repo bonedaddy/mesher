@@ -107,18 +107,16 @@ To encrypt data D to a given target public key T<sub>p</sub>:
 1. Generate a random pair of 256-bit keys (R<sub>p</sub>, R<sub>s</sub>).
 2. Use ECDG between R<sub>s</sub> and T<sub>p</sub> to get a shared 256-bit secret, S.
 3. Encrypt D under AES-256-GCM with key S, with a newly generated nonce (see **§ Nonces**).
-   Note that the crypto library being used for this automatically includes the nonce in the resulting ciphertext.
-4. Prepend the encrypted message with the 32 bytes of R<sub>p</sub>.
+4. Return R<sub>p</sub> || nonce || ciphertext.
 
-To decrypt a ciphertext C meant for a target secret key T<sub>s</sub>:
+To decrypt a ciphertext C with a target secret key T<sub>s</sub>:
 
-1. Split C at the 32-byte mark.
-   Take the first 32 bytes as a public key R<sub>p</sub>, and the rest as an encrypted message C<sub>m</sub>.
+1. Take the first 32 bytes as a public key R<sub>p</sub>, the next 12 bytes as a nonce N, and the rest as an encrypted message C<sub>m</sub>.
 2. Use ECDF between T<sub>s</sub> and R<sub>p</sub> to get a shared 256-bit secret, S.
-3. Decrypt C<sub>m</sub> with key S with AES-256-GCM.
-   The crypto library being used for AES-GCM automatically stores the nonce as part of the ciphertext during encryption, so during decryption, mesher doesn't need to explicitly retrieve the nonce.
+3. Decrypt C<sub>m</sub> with key S, nonce N, with AES-256-GCM.
+4. Return the result of the decryption.
 
-If any step fails during encryption or decryption (e.g. attempting to decrypt a C fewer than 32 bytes long) then it stops and an error is returned.
+If any step fails during encryption or decryption (e.g. attempting to decrypt a C fewer than 44 bytes long) then it stops and an error is returned.
 
 #### Signing and verification
 
