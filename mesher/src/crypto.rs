@@ -6,14 +6,15 @@
 //! While this is a nicer, easier-to-use wrapper around crypto primitives, using it still requires you to understand how public-key crypto works.
 //! For example, if you don't know the security guarantees provided by encryption vs. signing, **do not use this wrapper**.
 
-use std::sync::Mutex;
+use std::{sync::{Arc, Mutex}, fmt};
 use rand::prelude::*;
 use ed25519_dalek as ed;
 use x25519_dalek as x;
 use ring::aead::{self, BoundKey};
 
+#[derive(Clone)]
 struct NonceGen {
-  current: Mutex<u128>,
+  current: Arc<Mutex<u128>>,
 }
 
 impl NonceGen {
@@ -27,7 +28,7 @@ impl NonceGen {
       }
     };
     NonceGen {
-      current: Mutex::new(val)
+      current: Arc::new(Mutex::new(val))
     }
   }
 }
@@ -39,9 +40,9 @@ impl aead::NonceSequence for NonceGen {
       *d += 1;
       d
     };
-    let bytes = val.to_be_bytes();
+    let bytes = val.to_le_bytes();
     let mut bytes_12 = [0; 12];
-    bytes_12.copy_from_slice(&bytes);
+    bytes_12.copy_from_slice(&bytes[0..12]);
     let nonce = aead::Nonce::assume_unique_for_key(bytes_12);
     Ok(nonce)
   }
@@ -55,7 +56,7 @@ lazy_static! {
 ///
 /// It's used to *en*crypt things and check signatures.
 /// It can be automatically derived from the secret key with [`SecretKey::pkey`](struct.SecretKey.html#method.pkey).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PublicKey(x::PublicKey);
 impl PublicKey {
   /// Recreates a key from material gotten from [`PublicKey::material`](#method.material).
@@ -66,7 +67,7 @@ impl PublicKey {
   /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
   /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](struct.SecretKey.html#method.generate) to produce new keys, and [`SecretKey::pkey`](struct.SecretKey.html#method.pkey) to get the public key.
   pub fn load(material: [u8; 32]) -> PublicKey {
-    PublicKey(From::from(material))
+    PublicKey(x::PublicKey::from(material))
   }
 
   /// Gets the key material out of this key, so it can be stored.
@@ -91,15 +92,16 @@ impl PublicKey {
   /// The meshers will know based on how they're initialized.
   pub(crate) fn encrypt(&self, data: &[u8]) -> Vec<u8> {
     // variable names from README.md § Operation description
-    let Rs = x::StaticSecret::new(&mut thread_rng());
-    let Rp: x::PublicKey = From::from(&Rs);
-    let S = Rs.diffie_hellman(&self.0).as_bytes();
+    let rs = x::StaticSecret::new(&mut thread_rng());
+    let rp = x::PublicKey::from(&rs);
+    let s = rs.diffie_hellman(&self.0);
 
-    let key = aead::SealingKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, S).expect("Size should have matched"), *NONCE_GEN);
+    let mut key = aead::SealingKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched"), (*NONCE_GEN).clone());
 
     let mut cipher = data.to_vec();
+    // TODO: Put Rp_bytes in AAD
     key.seal_in_place_append_tag(aead::Aad::empty(), &mut cipher).expect("what error could this possibly be??");
-    let rp_bytes = Rp.as_bytes().to_vec();
+    let mut rp_bytes = rp.as_bytes().to_vec();
     rp_bytes.append(&mut cipher);
     rp_bytes
   }
@@ -111,7 +113,7 @@ impl PublicKey {
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// This returns a Result rather than a bool to help prevent unverified messages from being used accidentally.
-  pub(crate) fn verify(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
+  pub(crate) fn verify(&self, _ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
     unimplemented!()
   }
 }
@@ -122,34 +124,21 @@ impl PartialEq for PublicKey {
   }
 }
 
+impl fmt::Debug for PublicKey {
+  fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    let hex = self.0.as_bytes().iter().fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
+    write!(fmt, "PublicKey({})", hex)
+  }
+}
+
 /// The secret half of the keypair.
 ///
 /// It's used to *de*crypt things and create signatures.
 ///
 /// The public half can be derived with [`SecretKey::pkey`](#method.pkey).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SecretKey(x::StaticSecret);
 impl SecretKey {
-  /// **Insecurely** generate a secret key, deterministically, based off a name.
-  ///
-  /// # Safety
-  /// 
-  /// This function can **never** be cryptographically secure, and thus will never be "safe" to use.
-  /// The only safe, secure way to generate keys is with a source of cryptographically secure randomness.
-  /// To generate a key safely, use [`SecretKey::generate`](#method.generate).
-  /// 
-  /// This method only exists because, while debugging or writing tests, broken (deterministic) keygen can be useful, and in those cases, safety isn't a concern.
-  /// This particular method also preserves the name in the key data, for the same reason.
-  /// 
-  /// It's a drop-in, deterministic replacement for `SecretKey::generate`, so that you can swap it in and out easily for debugging.
-  pub unsafe fn of(name: &str) -> SecretKey {
-    let bytes = [0u8; 32];
-    for (i, nb) in name.bytes().enumerate() {
-      bytes[i].wrapping_add(nb);
-    }
-    SecretKey(From::from(bytes))
-  }
-
   /// Securely generate a new secret key.
   /// 
   /// This function makes its best effort to be cryptographically secure by relying on the OS's CSRNG.
@@ -159,7 +148,9 @@ impl SecretKey {
   /// 
   /// To get the public key of the freshly generated key, use [`SecretKey::pkey`](#method.pkey).
   pub fn generate() -> SecretKey {
-    SecretKey(thread_rng().next_u32() as u8)
+    let edgen = ed::SecretKey::generate(&mut thread_rng()).to_bytes();
+    let xkey = x::StaticSecret::from(edgen);
+    SecretKey(xkey)
   }
 
   /// Recreates a key from material gotten from [`SecretKey::material`](#method.material).
@@ -172,7 +163,7 @@ impl SecretKey {
   /// Even if the raw bytes passed are generated sufficiently randomly, they may not be a secure key.
   /// Either make completely certain you fully understand the underlying crypto math being used, or just use [`SecretKey::generate`](#method.generate) to produce new keys.
   pub fn load(material: [u8; 32]) -> SecretKey {
-    SecretKey(material.iter().fold(0u8, |a, i| a.wrapping_add(*i)))
+    SecretKey(x::StaticSecret::from(material))
   }
 
   /// Gets the key material out of this key, so it can be stored.
@@ -183,14 +174,12 @@ impl SecretKey {
   /// 
   /// You don't need to store the public key if you have the secret key because it can be trivially recreated from the private key.
   pub fn material(self) -> [u8; 32] {
-    let mut a = [0; 32];
-    a[0] = self.0;
-    a
+    self.0.to_bytes()
   }
 
   /// Derive the public half of the keypair based on the secret key.
   pub fn pkey(&self) -> PublicKey {
-    PublicKey(self.0)
+    PublicKey(x::PublicKey::from(&self.0))
   }
 
   /// Does the same thing as [`SecretKey::pkey`](#method.pkey) but returns a tuple of the two keys, which is ergonomically easier in some usages.
@@ -209,12 +198,22 @@ impl SecretKey {
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned ciphertexts.
   /// The meshers will know based on how they're initialized.
   pub(crate) fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, ()> {
-    let mut dec: Vec<_> = ciphertext.iter().map(|b| b.wrapping_sub(self.0)).collect();
-    if &dec[0..4] != MAGIC {
-      Err(())
-    } else {
-      Ok(dec.split_off(4))
+    if ciphertext.len() < 32 {
+      return Err(());
     }
+
+    let (rp_byte_slice, ciphertext) = ciphertext.split_at(32);
+    let mut rp_bytes = [0u8; 32];
+    rp_bytes.copy_from_slice(rp_byte_slice);
+    let rp = x::PublicKey::from(rp_bytes);
+    let s = self.0.diffie_hellman(&rp);
+
+    let mut key = aead::OpeningKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched"), NONCE_GEN.clone());
+
+    let mut ciphertext = ciphertext.to_vec();
+    key.open_in_place(aead::Aad::empty(), &mut ciphertext).map_err(|_| ())?;
+
+    Ok(ciphertext) // freshly decrypted
   }
 
   /// Signs this message with the given secret key.
@@ -224,17 +223,21 @@ impl SecretKey {
   /// This ensures that the crypto can be upgraded without requiring any other code to change.
   ///
   /// This returns an Option to help ensure that the message can't be accidentally taken without ensuring a valid signature.
-  pub(crate) fn sign(&self, data: &[u8]) -> Vec<u8> {
-    let sig = data.iter().fold(0u8, |a, i| a.wrapping_add(*i)).wrapping_add(self.0);
-    let mut res = data.to_vec();
-    res.push(sig);
-    res
+  pub(crate) fn sign(&self, _data: &[u8]) -> Vec<u8> {
+    unimplemented!()
   }
 }
 
 impl PartialEq for SecretKey {
   fn eq(&self, rhs: &SecretKey) -> bool {
     self.0.to_bytes() == rhs.0.to_bytes()
+  }
+}
+
+impl fmt::Debug for SecretKey {
+  fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    let hex = self.0.to_bytes().iter().fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i));
+    write!(fmt, "PublicKey({})", hex)
   }
 }
 
@@ -277,14 +280,6 @@ mod tests {
   }
 
   #[test]
-  fn of_deterministic() {
-    let sk1 = unsafe { SecretKey::of("some string") };
-    let sk2 = unsafe { SecretKey::of("some string") };
-    assert_eq!(sk1, sk2);
-  }
-
-  #[test]
-  #[should_panic] // TODO: Fix the crypto and remove this
   fn enc_nondeterministic() {
     let pk = SecretKey::generate().pkey();
     let data = &[1, 2, 3, 4];

@@ -4,10 +4,13 @@ use mesher_basic::TCP;
 fn main() {
   let mut args = std::env::args().skip(1);
   let sock = args.next().unwrap_or("[::1]:18540".to_owned());
+  let key = SecretKey::generate();
+  let pkey = key.pkey();
+  println!("Key to send to is: {}", pkey.material().iter().fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i)));
 
   println!("Listening for data on {}", sock);
 
-  let mut m = Mesher::unsigned(vec![unsafe { SecretKey::of("receiver") }]);
+  let mut m = Mesher::unsigned(vec![key]);
   m.add_transport::<TCP>("tcp").expect("Failed to add required transport");
   m.listen_on(&format!("tcp:{}", sock))
     .expect("Failed to add listener for messages");
