@@ -123,10 +123,13 @@ impl PublicKey {
     let ukey = aead::UnboundKey::new(&aead::AES_256_GCM, s.as_bytes()).expect("Size should have matched");
     let mut key = aead::SealingKey::new(ukey, SingleNonce::from(nonce));
 
+    let mut aad = Vec::with_capacity(32 + 12);
+    aad.extend_from_slice(rp.as_bytes());
+    aad.extend_from_slice(&nonce);
+
     let mut cipher = data.to_vec();
-    // TODO: Put Rp_bytes in AAD
     key
-      .seal_in_place_append_tag(aead::Aad::empty(), &mut cipher)
+      .seal_in_place_append_tag(aead::Aad::from(&aad), &mut cipher)
       .expect("Should never cause an error");
     let mut out = Vec::with_capacity(32 /* rp */ + 12 /* nonce */ + cipher.len());
     out.extend_from_slice(rp.as_bytes());
@@ -248,8 +251,8 @@ impl SecretKey {
       return Err(());
     }
 
-    let (rp_slice, ciphertext) = ciphertext.split_at(32);
-    let (nonce_slice, ciphertext) = ciphertext.split_at(12);
+    let (aad, ciphertext) = ciphertext.split_at(32 + 12);
+    let (rp_slice, nonce_slice) = aad.split_at(32);
 
     let mut rp_bytes = [0u8; 32];
     rp_bytes.copy_from_slice(rp_slice);
@@ -263,7 +266,7 @@ impl SecretKey {
     let mut key = aead::OpeningKey::new(ukey, SingleNonce::from(nonce_bytes));
 
     let mut ciphertext = ciphertext.to_vec();
-    match key.open_in_place(aead::Aad::empty(), &mut ciphertext) {
+    match key.open_in_place(aead::Aad::from(aad), &mut ciphertext) {
       Ok(plain) => Ok(plain.to_vec()),
       Err(_) => Err(()),
     }
