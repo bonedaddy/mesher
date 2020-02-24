@@ -18,17 +18,18 @@ In smaller, more real words, mesher:
 It's primarily designed for anonymous, one-way communication.
 However, replies facilitate round-trip communications, which in turn can be used to make a tunnel.
 
+The way it works is by bouncing packets between nodes.
+The path is preplanned by the sender, and represented as instructions for each node.
+This representation allows for 
+
 ## TODO
 
 - Finish **§ Overview**
 - Write **§ Versioning**, **§ Usage**, and **§ Structure**
 - Make sure **§ Crypto** makes sense at all
 
-## Overview
 
-Mesher sends messages across mesh networks.
-It does this by creating packets, then bouncing them between nodes.
-The packets are made up of encrypted instructions
+## Usage
 
 ## Crypto
 
@@ -68,8 +69,9 @@ Note some important exceptions and caveats:
 
 ### Disclosure
 
-If you find *any evidence* that *any* of the guarantees are false, please email directly at [disclosure@cybers.eco](mailto:nic@cybers.eco), to coordinate a fix and disclosure.
-Please allow up to two weeks for an initial response.
+If you find *any evidence* that *any* of the guarantees are false, please email directly at [disclosure@cybers.eco](mailto:disclosure@cybers.eco), to coordinate a fix and disclosure.
+Please include as much information as you can, and allow up to two weeks for an initial response.
+A working exploit would be ideal, but isn't necessary.
 
 If you find any issues with any crates mesher uses, please responsibly disclose the issue to the creators of the relevant crate.
 Please *also* let me know (see **§ Disclosure** below), so I can switch to a safer encryption method.
