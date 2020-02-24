@@ -4,8 +4,6 @@
 > This README is somewhat aspirational.
 > It describes, in the present tense, what the mesher project will eventually include.
 > Many features are already there -- e.g. the library is nearly feature-complete -- but many more are not.
-> 
-> This also applies to the docs, especially those regarding the crypto subsystem, which is currently *intentionally* utterly broken.
 
 Mesher is a fairly simple wrapper over a fairly complex concept:
 Securely and anonymously sending a message over a heterogeneously connected mesh network.
@@ -40,6 +38,9 @@ The code dealing directly with crypto primitives is intentionally separated out 
 This makes it easy to review the use of crypto primitives, though to decide whether any product is truly secure, the entire thing must be vetted, not just its use of primitives.
 
 If you plan to vet this, you should also vet the crates used to do the actual math, and ensure they uphold the security you want.
+
+Note that mesher doesn't contain _any_ implementations of crypto primitives.
+It uses well-known implementations of Ed25519, X25519, and AES-256-GCM, and always strives to compose them in well-understood and well-studied ways.
 
 ### Guarantees
 
@@ -126,7 +127,5 @@ Verification involves just removing the last 64 bytes of the ciphertext and chec
 
 The only major thing to note is that verification is done with `ed25519_dalek::PublicKey::verify_strict`, rather than the normal `verify` method.
 See [A Note on Signature Malleability](https://github.com/dalek-cryptography/ed25519-dalek#a-note-on-signature-malleability) for more information.
-
-#### Key conversion
-
-
+However, this is only important if you want to vet the crypto, or are writing another library to be inter-compatible with mesher.
+If you simply use mesher consistently, this won't cause any issues for you.

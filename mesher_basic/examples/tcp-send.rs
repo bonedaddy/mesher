@@ -4,12 +4,12 @@ use mesher::prelude::*;
 use mesher_basic::TCP;
 
 fn get_pkey(s: &str) -> Result<PublicKey, &'static str> {
-  if s.len() != 64 {
-    return Err("Must be 64 characters long exactly");
+  if s.len() != 128 {
+    return Err("Must be 128 bytes exactly!");
   }
-  let mut bytes = [0; 32];
-  for i in (0..64).step_by(2) {
-    bytes[i / 2] = u8::from_str_radix(&s[i..i + 2], 16).expect("Invalid hex");
+  let mut bytes = [0; 64];
+  for i in 0..bytes.len() {
+    bytes[i] = u8::from_str_radix(&s[i*2..i*2 + 2], 16).expect("Invalid hex");
   }
   PublicKey::load(bytes).map_err(|_| "Pkey is invalid")
 }
