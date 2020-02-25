@@ -23,8 +23,8 @@ impl Message {
 /// (However, you could well use messages passed through mesher to handle some of it.)
 pub struct Mesher {
   transports: HashMap<String, Box<dyn Transport>>,
-  own_skeys: Vec<SecretKey>,
-  sender_pkeys: Vec<PublicKey>,
+  own_skeys: Vec<encrypt::SecretKey>,
+  sender_pkeys: Vec<sign::PublicKey>,
 }
 
 impl Mesher {
@@ -33,7 +33,7 @@ impl Mesher {
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers' packets.
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
-  pub fn signed(own_skeys: Vec<SecretKey>, sender_pkeys: Vec<PublicKey>) -> Mesher {
+  pub fn signed(own_skeys: Vec<encrypt::SecretKey>, sender_pkeys: Vec<sign::PublicKey>) -> Mesher {
     assert!(!sender_pkeys.is_empty(), "Must have at least one sender key listed");
 
     Mesher {
@@ -49,7 +49,7 @@ impl Mesher {
   /// Note that there are no (explicit) markers to differentiate between signed and unsigned meshers.
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
-  pub fn unsigned(own_skeys: Vec<SecretKey>) -> Mesher {
+  pub fn unsigned(own_skeys: Vec<encrypt::SecretKey>) -> Mesher {
     Mesher {
       transports: HashMap::new(),
       own_skeys,

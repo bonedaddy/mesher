@@ -12,9 +12,7 @@ default = []
 c_api = []
 
 [dependencies]
-ring = "0.16.9"
-x25519-dalek = "0.6.0"
-ed25519-dalek = "1.0.0-pre.3"
+sodiumoxide = "0.2.5"
 rand = "0.7.3"
 serde = "1.0.104"
 bincode = "1.2.1"

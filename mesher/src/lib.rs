@@ -25,6 +25,7 @@
 extern crate lazy_static;
 
 pub mod crypto;
+
 pub mod debug_transports;
 pub mod fail;
 
@@ -48,7 +49,6 @@ pub mod prelude {
   //! ```
 
   pub use crate::{
-    crypto::{PublicKey, SecretKey},
-    fail, Mesher, Message, Packet, Transport,
+    fail, Mesher, Message, Packet, Transport, crypto::*,
   };
 }

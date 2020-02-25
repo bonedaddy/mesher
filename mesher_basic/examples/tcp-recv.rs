@@ -4,12 +4,10 @@ use mesher_basic::TCP;
 fn main() {
   let mut args = std::env::args().skip(1);
   let sock = args.next().unwrap_or("[::1]:18540".to_owned());
-  let key = SecretKey::generate();
-  let pkey = key.pkey();
+  let (pkey, key) = encrypt::gen_keypair();
   println!(
     "Key to send to is: {}",
-    pkey
-      .material()
+    pkey[..]
       .iter()
       .fold(String::with_capacity(64), |a, i| a + &format!("{:02X}", i))
   );

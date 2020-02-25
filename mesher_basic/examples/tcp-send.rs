@@ -3,15 +3,15 @@ use std::io::{stdin, Read};
 use mesher::prelude::*;
 use mesher_basic::TCP;
 
-fn get_pkey(s: &str) -> Result<PublicKey, &'static str> {
-  if s.len() != 128 {
-    return Err("Must be 128 bytes exactly!");
+fn get_pkey(s: &str) -> Result<encrypt::PublicKey, &'static str> {
+  if s.len() != 64 {
+    return Err("Must be 64 characters/32 hex bytes exactly");
   }
-  let mut bytes = [0; 64];
+  let mut bytes = [0; 32];
   for i in 0..bytes.len() {
     bytes[i] = u8::from_str_radix(&s[i*2..i*2 + 2], 16).expect("Invalid hex");
   }
-  PublicKey::load(bytes).map_err(|_| "Pkey is invalid")
+  encrypt::PublicKey::from_slice(&bytes).ok_or("Pkey is invalid")
 }
 
 fn main() {
@@ -28,7 +28,7 @@ fn main() {
     .expect("Failed to read from STDIN");
 
   println!("\n---\nSending {} bytes...", data.len());
-  let mut m = Mesher::unsigned(vec![SecretKey::generate()]);
+  let mut m = Mesher::unsigned(vec![encrypt::gen_keypair().1]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
   m.launch(Packet::unsigned().add_message(&data, &pkey), &format!("tcp:{}", sock))
     .expect("Failed to send data");

@@ -46,13 +46,13 @@ impl Chunk {
   ///
   /// Should be considered a black box, as the format may change in the future.
   /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`](#method.decrypt)
-  fn encrypt(self, target_key: PublicKey) -> Vec<u8> {
-    target_key.encrypt(&self.serialize())
+  fn encrypt(self, target_key: &encrypt::PublicKey) -> Vec<u8> {
+    encrypt::seal(&self.serialize(), target_key)
   }
 
   /// Same as [`Chunk::encrypt`](#method.encrypt), but will also sign with the sender key.
-  fn encrypt_and_sign(self, target_key: PublicKey, sender_key: &SecretKey) -> Vec<u8> {
-    sender_key.sign(&target_key.encrypt(&self.serialize()))
+  fn encrypt_and_sign(self, target_key: &encrypt::PublicKey, sender_key: &sign::SecretKey) -> Vec<u8> {
+    sign::sign(&encrypt::seal(&self.serialize(), target_key), sender_key)
   }
 
   /// Decrypt a chunk of bytes with all of our keys.
@@ -61,9 +61,9 @@ impl Chunk {
   ///
   /// Expect the input format to this to be a black box.
   /// Give it things encrypted with [`Chunk::encrypt`](#method.encrypt).
-  fn decrypt(bytes: Vec<u8>, keys: &[SecretKey]) -> Chunk {
+  fn decrypt(bytes: Vec<u8>, keys: &[encrypt::SecretKey]) -> Chunk {
     for key in keys {
-      if let Ok(dec) = key.decrypt(&bytes) {
+      if let Ok(dec) = encrypt::open(&bytes, key) {
         if let Ok(des) = Self::deserialize(dec) {
           return des;
         }
@@ -73,12 +73,12 @@ impl Chunk {
   }
 
   /// Same as [`Chunk::decrypt`](#method.decrypt) but will check signatures against the list of signing keys.
-  fn decrypt_signed(bytes: Vec<u8>, enc_keys: &[SecretKey], sign_keys: &[PublicKey]) -> Chunk {
-    let veried = match sign_keys.iter().find_map(|k| k.verify(&bytes).ok()) {
+  fn decrypt_signed(bytes: Vec<u8>, enc_keys: &[encrypt::SecretKey], sign_keys: &[sign::PublicKey]) -> Chunk {
+    let veried = match sign_keys.iter().find_map(|k| sign::verify(&bytes, k).ok()) {
       Some(v) => v,
       None => return Chunk::Encrypted(bytes),
     };
-    let decd = match enc_keys.iter().find_map(|k| k.decrypt(&veried).ok()) {
+    let decd = match enc_keys.iter().find_map(|k| encrypt::open(&veried, k).ok()) {
       Some(d) => d,
       None => return Chunk::Encrypted(bytes),
     };
@@ -95,8 +95,8 @@ impl Chunk {
 /// The keys don't have to be unique -- more than one piece can be associated with a single key.
 /// For example, if a node is meant to both receive a message and transport the packet further, those two might be encrypted with the same key.
 pub struct Packet {
-  chunks: Vec<(Chunk, PublicKey)>,
-  signing_key: Option<SecretKey>,
+  chunks: Vec<Vec<u8>>,
+  signing_key: Option<sign::SecretKey>,
 }
 
 impl Packet {
@@ -109,36 +109,35 @@ impl Packet {
   }
 
   /// Creates a packet whose chunks will be signed by the given key.
-  pub fn signed(skey: SecretKey) -> Packet {
+  pub fn signed(skey: sign::SecretKey) -> Packet {
     Packet {
       chunks: vec![],
       signing_key: Some(skey),
     }
   }
 
-  /// Adds a message to the packet, for the node with the right skey to read.
-  pub fn add_message(mut self, data: &[u8], target_pkey: &PublicKey) -> Packet {
-    self.chunks.push((Chunk::Message(data.to_vec()), target_pkey.clone()));
+  fn add_instruction(mut self, instruct: Chunk, target_pkey: &encrypt::PublicKey) -> Packet {
+    let bytes = match &self.signing_key {
+      Some(signing_key) => instruct.encrypt_and_sign(target_pkey, signing_key),
+      None => instruct.encrypt(target_pkey),
+    };
+    self.chunks.push(bytes);
     self
   }
 
+  /// Adds a message to the packet, for the node with the right skey to read.
+  pub fn add_message(self, data: &[u8], node_pkey: &encrypt::PublicKey) -> Packet {
+    self.add_instruction(Chunk::Message(data.to_vec()), node_pkey)
+  }
+
   /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
-  pub fn add_hop(mut self, path: String, node_pkey: &PublicKey) -> Packet {
-    self.chunks.push((Chunk::Transport(path), node_pkey.clone()));
-    self
+  pub fn add_hop(self, path: String, node_pkey: &encrypt::PublicKey) -> Packet {
+    self.add_instruction(Chunk::Transport(path), node_pkey)
   }
 
   /// Serializes the packet into a sendable format.
   pub(crate) fn into_bytes(self) -> fail::Result<Vec<u8>> {
-    let packet: Vec<_> = match self.signing_key {
-      Some(skey) => self
-        .chunks
-        .into_iter()
-        .map(|(c, k)| c.encrypt_and_sign(k, &skey))
-        .collect(),
-      None => self.chunks.into_iter().map(|(c, k)| c.encrypt(k)).collect(),
-    };
-    bincode::serialize(&packet).map_err(|e| fail::MesherFail::Other(Box::new(e)))
+    bincode::serialize(&self.chunks).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
   /// Given a packet and all of our secret keys, decrypt as many chunks as possible.
@@ -147,7 +146,7 @@ impl Packet {
   /// composed of [`Chunk::Encrypted`](enum.Chunk.html#variant.Encrypted).
   ///
   /// See [`Chunk::decrypt`](enum.Chunk.html#method.decrypt) for more information.
-  pub(crate) fn from_bytes(packet: &[u8], keys: &[SecretKey]) -> fail::Result<Vec<Chunk>> {
+  pub(crate) fn from_bytes(packet: &[u8], keys: &[encrypt::SecretKey]) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
       .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
       .map_err(|_| fail::MesherFail::InvalidPacket)
@@ -156,8 +155,8 @@ impl Packet {
   /// Same as [`Packet::from_bytes`](#method.from_bytes) but only decrypts chunks signed with one of the valid keys.
   pub(crate) fn from_signed_bytes(
     packet: &[u8],
-    keys: &[SecretKey],
-    sender_keys: &[PublicKey],
+    keys: &[encrypt::SecretKey],
+    sender_keys: &[sign::PublicKey],
   ) -> fail::Result<Vec<Chunk>> {
     bincode::deserialize::<Vec<Vec<u8>>>(packet)
       .map(|packet| {
@@ -186,8 +185,8 @@ mod tests {
 
   #[test]
   fn unsigned_serialized_deserializable() {
-    let (sk1, pk1) = SecretKey::generate().pair();
-    let (sk2, pk2) = SecretKey::generate().pair();
+    let (pk1, sk1) = encrypt::gen_keypair();
+    let (pk2, sk2) = encrypt::gen_keypair();
 
     let packet = Packet::unsigned()
       .add_hop("hello".to_owned(), &pk1)
@@ -206,9 +205,9 @@ mod tests {
 
   #[test]
   fn signed_serialized_deserializable() {
-    let (sks, pks) = SecretKey::generate().pair();
-    let (sk1, pk1) = SecretKey::generate().pair();
-    let (sk2, pk2) = SecretKey::generate().pair();
+    let (pks, sks) = sign::gen_keypair();
+    let (pk1, sk1) = encrypt::gen_keypair();
+    let (pk2, sk2) = encrypt::gen_keypair();
 
     let packet = Packet::signed(sks)
       .add_hop("hello".to_owned(), &pk1)
@@ -216,7 +215,7 @@ mod tests {
       .into_bytes()
       .expect("Failed to serialize packet");
 
-    let dec1 = Packet::from_signed_bytes(&packet, &[sk1], &[pks.clone()]).expect("Failed to deserialize packets");
+    let dec1 = Packet::from_signed_bytes(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
     assert_eq!(dec1[0], Chunk::Transport("hello".to_owned()));
     assert!(matches!(dec1[1], Chunk::Encrypted(_)));
 

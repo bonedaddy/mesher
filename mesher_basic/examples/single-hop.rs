@@ -4,13 +4,13 @@ use mesher_basic::TCP;
 use std::{thread::sleep, time::Duration};
 
 fn make_sender() -> Mesher {
-  let mut m = Mesher::unsigned(vec![SecretKey::generate()]);
+  let mut m = Mesher::unsigned(vec![encrypt::gen_keypair().1]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m
 }
 
-fn make_receiver() -> (Mesher, PublicKey) {
-  let (sk, pk) = SecretKey::generate().pair();
+fn make_receiver() -> (Mesher, encrypt::PublicKey) {
+  let (pk, sk) = encrypt::gen_keypair();
   let mut m = Mesher::unsigned(vec![sk]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m.listen_on("tcp:localhost:18540").expect("Failed to listen on port");
