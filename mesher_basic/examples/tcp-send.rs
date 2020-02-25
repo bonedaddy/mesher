@@ -28,7 +28,7 @@ fn main() {
     .expect("Failed to read from STDIN");
 
   println!("\n---\nSending {} bytes...", data.len());
-  let mut m = Mesher::unsigned(vec![encrypt::gen_keypair().1]);
+  let mut m = Mesher::unsigned(vec![]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
   m.launch(Packet::unsigned().add_message(&data, &pkey), &format!("tcp:{}", sock))
     .expect("Failed to send data");

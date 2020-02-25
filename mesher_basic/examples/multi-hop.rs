@@ -4,7 +4,7 @@ use mesher_basic::TCP;
 use std::{thread::sleep, time::Duration};
 
 fn make_sender() -> Mesher {
-  let mut m = Mesher::unsigned(vec![encrypt::gen_keypair().1]);
+  let mut m = Mesher::unsigned(vec![]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   m
 }

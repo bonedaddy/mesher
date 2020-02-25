@@ -4,7 +4,7 @@ use crate::prelude::*;
 use std::collections::HashMap;
 
 /// Represents a single message received by a mesher.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Message {
   contents: Vec<u8>,
 }
@@ -126,7 +126,9 @@ impl Mesher {
 
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.
   pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
-    // don't focus too much on how I got this...
+    if self.own_skeys.is_empty() {
+      return Err(fail::MesherFail::NoKeys);
+    }
     let mut packets = vec![];
     for (_, transport) in self.transports.iter_mut() {
       packets.append(&mut transport.receive()?);
@@ -136,5 +138,20 @@ impl Mesher {
       messages.append(&mut self.process_packet(p)?);
     }
     Ok(messages)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn empty_mesher_fails_recv() {
+    let mut empty = Mesher::unsigned(vec![]);
+
+    match empty.recv() {
+      Err(fail::MesherFail::NoKeys) => (),
+      _ => unreachable!(),
+    }
   }
 }

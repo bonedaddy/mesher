@@ -2,11 +2,10 @@ use mesher::debug_transports::InMemory;
 use mesher::prelude::*;
 
 fn main() {
-  let (_, send_sk) = encrypt::gen_keypair();
   let (r1_pk, r1_sk) = encrypt::gen_keypair();
   let (r2_pk, r2_sk) = encrypt::gen_keypair();
 
-  let mut sender = Mesher::unsigned(vec![send_sk]);
+  let mut sender = Mesher::unsigned(vec![]);
   sender
     .add_transport::<InMemory>("tcp")
     .expect("Failed to add transport");
