@@ -25,20 +25,23 @@ fn main() {
       let contents = msg.contents();
       match std::str::from_utf8(contents) {
         Ok(s) if s.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) => {
-          println!("Text message received ({} chars):", s.len());
+          println!("Text message received:");
           println!("{}", s);
+          println!("---");
+          println!("({} chars)", s.len())
         }
         _ => {
-          println!("Binary message received ({} bytes):", contents.len());
+          println!("Binary message received:");
           for (i, byte) in contents.iter().enumerate() {
             print!("{:02x}", byte);
             if i % 40 == 39 {
               println!();
             }
           }
+          println!("---");
+          println!("({} bytes)", contents.len())
         }
       };
-      println!("\n---");
     }
     std::thread::sleep(std::time::Duration::from_millis(100));
   }
