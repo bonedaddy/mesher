@@ -20,10 +20,10 @@ fn main() {
     .expect("Failed to add transport");
   recvr2.listen_on("tcp:localhost:18550").expect("Failed to listen");
 
-  let packet = Packet::unsigned()
-    .add_message(&[1], &r1_pk)
-    .add_message(&[2], &r2_pk)
-    .add_hop("tcp:localhost:18550".to_owned(), &r1_pk);
+  let mut packet = Packet::unsigned();
+  packet.add_message(&[1], &r1_pk);
+  packet.add_message(&[2], &r2_pk);
+  packet.add_hop("tcp:localhost:18550".to_owned(), &r1_pk);
 
   sender.launch(packet, "tcp:localhost:18540").expect("failed to launch");
 

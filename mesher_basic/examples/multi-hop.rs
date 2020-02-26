@@ -33,9 +33,9 @@ fn main() {
   let (mut m2, m2k) = make_receiver();
 
   for message in MESSAGES {
-    let packet = Packet::unsigned()
-      .add_message(message.as_bytes(), &m2k)
-      .add_hop("tcp:localhost:18540".to_owned(), &mbk);
+    let mut packet = Packet::unsigned();
+    packet.add_message(message.as_bytes(), &m2k);
+    packet.add_hop("tcp:localhost:18540".to_owned(), &mbk);
     m1.launch(packet, "tcp:localhost:18550").expect("Faield to send");
     println!("Message sent: {}", message);
   }

@@ -106,7 +106,7 @@ impl Mesher {
     let mut messages = vec![];
     for piece in dis {
       match piece {
-        crate::packet::Chunk::Message(m) => messages.push(Message { contents: m }),
+        crate::packet::Chunk::Message(m, _) => messages.push(Message { contents: m }),
         crate::packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
         crate::packet::Chunk::Encrypted(_) => (), // piece not meant for us
       }

@@ -24,7 +24,8 @@ fn main() {
   let (mut m2, m2k) = make_receiver();
 
   for message in MESSAGES {
-    let packet = Packet::unsigned().add_message(message.as_bytes(), &m2k);
+    let mut packet = Packet::unsigned();
+    packet.add_message(message.as_bytes(), &m2k);
     m1.launch(packet, "tcp:localhost:18540").expect("Failed to send");
     println!("Message sent: {}", message);
   }

@@ -30,7 +30,8 @@ fn main() {
   println!("\n---\nSending {} bytes...", data.len());
   let mut m = Mesher::unsigned(vec![]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
-  m.launch(Packet::unsigned().add_message(&data, &pkey), &format!("tcp:{}", sock))
-    .expect("Failed to send data");
+  let mut packet = Packet::unsigned();
+  packet.add_message(&data, &pkey);
+  m.launch(packet, &format!("tcp:{}", sock)).expect("Failed to send data");
   println!("Sent! Did you see it get received?");
 }

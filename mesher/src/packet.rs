@@ -6,7 +6,7 @@ use rand::prelude::*;
 #[derive(Debug, PartialEq)]
 pub(crate) enum Chunk {
   /// A message to pass back to the [`Mesher`](../struct.Mesher.html)
-  Message(Vec<u8>),
+  Message(Vec<u8>, Option<u8>),
   /// A path to send this packet along
   Transport(String),
   /// A chunk we couldn't decrypt (meant for someone else)
@@ -18,8 +18,13 @@ impl Chunk {
   /// Best considered a black box, so it can change freely.
   fn serialize(self) -> Vec<u8> {
     match self {
-      Chunk::Message(mut m) => {
+      Chunk::Message(mut m, reply_to) => {
         let mut b = vec![0];
+        let reply_to = match reply_to {
+          None => 0,
+          Some(idx) => idx + 1,
+        };
+        b.push(reply_to);
         b.append(&mut m);
         b
       }
@@ -36,7 +41,13 @@ impl Chunk {
   /// Best considered a black box, so it can change freely.
   fn deserialize(mut from: Vec<u8>) -> Result<Chunk, ()> {
     match from.get(0) {
-      Some(0) => Ok(Chunk::Message(from.drain(1..).collect())),
+      Some(0) => {
+        let reply_to = match from[1] {
+          0 => None,
+          i => Some(i - 1),
+        };
+        Ok(Chunk::Message(from.drain(2..).collect(), reply_to))
+      }
       Some(1) => Ok(Chunk::Transport(
         String::from_utf8(from.drain(1..).collect()).map_err(|_| ())?,
       )),
@@ -91,21 +102,47 @@ impl Chunk {
   }
 }
 
+pub struct ReplyPathHandle<'packet>(u8, &'packet mut Packet);
+
+impl<'packet> ReplyPathHandle<'packet> {
+  /// Adds a message to the packet, for the node with the right skey to read.
+  pub fn add_message<'handle>(&'handle mut self, data: &[u8], node_pkey: &encrypt::PublicKey, reply: Option<ReplyPathHandle<'handle>>) {
+    self.1.add_instruction(Some(self.0), Chunk::Message(data.to_vec(), reply.map(|h| h.0)), node_pkey)
+  }
+
+  /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
+  pub fn add_hop(&mut self, path: String, node_pkey: &encrypt::PublicKey) {
+    self.1.add_instruction(Some(self.0), Chunk::Transport(path), node_pkey)
+  }
+
+  /// Instructs anyone who gets a reply sent along this path how to reply.
+  /// 
+  /// This can "nest" infinitely, but that's only rarely useful.
+  /// If you're replying back to whoever sent you the message, they constructed a path before, and can do it again.
+  /// 
+  /// Nest is in scare-quotes because, in the packet, there is no nesting -- it's treated like any other reply block.
+  pub fn add_reply_path(&mut self) -> Option<ReplyPathHandle> {
+    self.1.add_reply_path()
+  }
+}
+
 /// Represents a packet to be sent out.
 ///
 /// Note that each piece of the packet is associated with a key.
 /// The keys don't have to be unique -- more than one piece can be associated with a single key.
 /// For example, if a node is meant to both receive a message and transport the packet further, those two might be encrypted with the same key.
 pub struct Packet {
-  chunks: Vec<Vec<u8>>,
-  signing_key: Option<sign::SecretKey>,
+  pub(crate) main_path: Vec<Vec<u8>>,
+  pub(crate) reply_paths: Vec<Vec<Vec<u8>>>,
+  pub(crate) signing_key: Option<sign::SecretKey>,
 }
 
 impl Packet {
   /// Creates a packet whose chunks won't be signed.
   pub fn unsigned() -> Packet {
     Packet {
-      chunks: vec![],
+      main_path: vec![],
+      reply_paths: vec![],
       signing_key: None,
     }
   }
@@ -113,34 +150,52 @@ impl Packet {
   /// Creates a packet whose chunks will be signed by the given key.
   pub fn signed(skey: sign::SecretKey) -> Packet {
     Packet {
-      chunks: vec![],
+      main_path: vec![],
+      reply_paths: vec![],
       signing_key: Some(skey),
     }
   }
 
-  fn add_instruction(mut self, instruct: Chunk, target_pkey: &encrypt::PublicKey) -> Packet {
+  fn add_instruction(&mut self, block: Option<u8>, instruct: Chunk, target_pkey: &encrypt::PublicKey) {
     let bytes = match &self.signing_key {
       Some(signing_key) => instruct.encrypt_and_sign(target_pkey, signing_key),
       None => instruct.encrypt(target_pkey),
     };
-    self.chunks.push(bytes);
-    self
+    match block {
+      None => &mut self.main_path,
+      Some(idx) => &mut self.reply_paths[idx as usize],
+    }.push(bytes);
   }
 
   /// Adds a message to the packet, for the node with the right skey to read.
-  pub fn add_message(self, data: &[u8], node_pkey: &encrypt::PublicKey) -> Packet {
-    self.add_instruction(Chunk::Message(data.to_vec()), node_pkey)
+  pub fn add_message(&mut self, data: &[u8], node_pkey: &encrypt::PublicKey) {
+    self.add_instruction(None, Chunk::Message(data.to_vec(), None), node_pkey)
   }
 
   /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
-  pub fn add_hop(self, path: String, node_pkey: &encrypt::PublicKey) -> Packet {
-    self.add_instruction(Chunk::Transport(path), node_pkey)
+  pub fn add_hop(&mut self, path: String, node_pkey: &encrypt::PublicKey) {
+    self.add_instruction(None, Chunk::Transport(path), node_pkey)
+  }
+
+  pub fn add_reply_path(&mut self) -> Option<ReplyPathHandle> {
+    if self.reply_paths.len() == u8::max_value() as usize {
+      return None;
+    }
+    self.reply_paths.push(vec![]);
+    Some(ReplyPathHandle(self.reply_paths.len() as u8 - 1, self))
   }
 
   /// Serializes the packet into a sendable format.
   pub(crate) fn into_bytes(mut self) -> fail::Result<Vec<u8>> {
-    self.chunks.shuffle(&mut thread_rng());
-    bincode::serialize(&self.chunks).map_err(|e| fail::MesherFail::Other(Box::new(e)))
+    let mut rng = thread_rng();
+    let mut paths = Vec::with_capacity(self.reply_paths.len() + 1);
+    self.main_path.shuffle(&mut rng);
+    paths.push(self.main_path);
+    for mut path in self.reply_paths {
+      path.shuffle(&mut rng);
+      paths.push(path);
+    }
+    bincode::serialize(&paths).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
   /// Given a packet and all of our secret keys, decrypt as many chunks as possible.
@@ -180,10 +235,10 @@ mod tests {
   // TODO: Delete this once it's part of std
   macro_rules! matches {
     ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
-        match $expression {
-            $( $pattern )|+ $( if $guard )? => true,
-            _ => false
-        }
+      match $expression {
+        $( $pattern )|+ $( if $guard )? => true,
+        _ => false
+      }
     }
   }
 
@@ -192,18 +247,17 @@ mod tests {
     let (pk1, sk1) = encrypt::gen_keypair();
     let (pk2, sk2) = encrypt::gen_keypair();
 
-    let packet = Packet::unsigned()
-      .add_hop("hello".to_owned(), &pk1)
-      .add_message(&[1, 2, 3], &pk2)
-      .into_bytes()
-      .expect("Failed to serialize packet");
+    let mut packet = Packet::unsigned();
+    packet.add_hop("hello".to_owned(), &pk1);
+    packet.add_message(&[1, 2, 3], &pk2);
+    let packet = packet.into_bytes().expect("Failed to serialize packet");
 
     let dec1 = Packet::from_bytes(&packet, &[sk1]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
     assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::from_bytes(&packet, &[sk2]).expect("Failed to deserialize packets");
-    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3])));
+    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
     assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 
@@ -213,18 +267,17 @@ mod tests {
     let (pk1, sk1) = encrypt::gen_keypair();
     let (pk2, sk2) = encrypt::gen_keypair();
 
-    let packet = Packet::signed(sks)
-      .add_hop("hello".to_owned(), &pk1)
-      .add_message(&[1, 2, 3], &pk2)
-      .into_bytes()
-      .expect("Failed to serialize packet");
+    let mut packet = Packet::signed(sks);
+    packet.add_hop("hello".to_owned(), &pk1);
+    packet.add_message(&[1, 2, 3], &pk2);
+    let packet = packet.into_bytes().expect("Failed to serialize packet");
 
     let dec1 = Packet::from_signed_bytes(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
     assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::from_signed_bytes(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
-    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3])));
+    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
     assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 }
