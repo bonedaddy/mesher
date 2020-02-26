@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+use rand::prelude::*;
+
 /// One piece of a packet.
 #[derive(Debug, PartialEq)]
 pub(crate) enum Chunk {
@@ -136,7 +138,8 @@ impl Packet {
   }
 
   /// Serializes the packet into a sendable format.
-  pub(crate) fn into_bytes(self) -> fail::Result<Vec<u8>> {
+  pub(crate) fn into_bytes(mut self) -> fail::Result<Vec<u8>> {
+    self.chunks.shuffle(&mut thread_rng());
     bincode::serialize(&self.chunks).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
 
@@ -174,6 +177,7 @@ mod tests {
   use super::*;
 
   // "borrowed" from https://doc.rust-lang.org/src/core/macros/mod.rs.html#264-271
+  // TODO: Delete this once it's part of std
   macro_rules! matches {
     ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
         match $expression {
@@ -195,12 +199,12 @@ mod tests {
       .expect("Failed to serialize packet");
 
     let dec1 = Packet::from_bytes(&packet, &[sk1]).expect("Failed to deserialize packets");
-    assert_eq!(dec1[0], Chunk::Transport("hello".to_owned()));
-    assert!(matches!(dec1[1], Chunk::Encrypted(_)));
+    assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
+    assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::from_bytes(&packet, &[sk2]).expect("Failed to deserialize packets");
-    assert!(matches!(dec2[0], Chunk::Encrypted(_)));
-    assert_eq!(dec2[1], Chunk::Message(vec![1, 2, 3]));
+    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3])));
+    assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 
   #[test]
@@ -216,11 +220,11 @@ mod tests {
       .expect("Failed to serialize packet");
 
     let dec1 = Packet::from_signed_bytes(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
-    assert_eq!(dec1[0], Chunk::Transport("hello".to_owned()));
-    assert!(matches!(dec1[1], Chunk::Encrypted(_)));
+    assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
+    assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::from_signed_bytes(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
-    assert!(matches!(dec2[0], Chunk::Encrypted(_)));
-    assert_eq!(dec2[1], Chunk::Message(vec![1, 2, 3]));
+    assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3])));
+    assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 }
