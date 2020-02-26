@@ -34,7 +34,7 @@ impl Mesher {
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   pub fn signed(own_skeys: Vec<encrypt::SecretKey>, sender_pkeys: Vec<sign::PublicKey>) -> Mesher {
-    assert!(!sender_pkeys.is_empty(), "Must have at least one sender key listed");
+    assert!(!sender_pkeys.is_empty(), "Provide sender keys. If you don't want any, use Mesher::unsigned instead.");
 
     Mesher {
       transports: HashMap::new(),
@@ -153,5 +153,11 @@ mod tests {
       Err(fail::MesherFail::NoKeys) => (),
       _ => unreachable!(),
     }
+  }
+
+  #[test]
+  #[should_panic(expected = "Provide sender keys. If you don't want any, use Mesher::unsigned instead.")]
+  fn signed_mesher_empty_keys_fails() {
+    let _empty = Mesher::signed(vec![], vec![]);
   }
 }
