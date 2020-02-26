@@ -34,7 +34,10 @@ impl Mesher {
   /// Signed meshers will expect their incoming packets to have signatures; unsigned meshers won't.
   /// If a signing mesher receives an unsigned packet or vice versa, it'll be a no-op.
   pub fn signed(own_skeys: Vec<encrypt::SecretKey>, sender_pkeys: Vec<sign::PublicKey>) -> Mesher {
-    assert!(!sender_pkeys.is_empty(), "Provide sender keys. If you don't want any, use Mesher::unsigned instead.");
+    assert!(
+      !sender_pkeys.is_empty(),
+      "Provide sender keys. If you don't want any, use Mesher::unsigned instead."
+    );
 
     Mesher {
       transports: HashMap::new(),
@@ -105,7 +108,7 @@ impl Mesher {
       match piece {
         crate::packet::Chunk::Message(m) => messages.push(Message { contents: m }),
         crate::packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
-        crate::packet::Chunk::Encrypted(_) => (), /* piece not meant for us */
+        crate::packet::Chunk::Encrypted(_) => (), // piece not meant for us
       }
     }
     Ok(messages)

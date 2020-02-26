@@ -9,7 +9,7 @@ fn get_pkey(s: &str) -> Result<encrypt::PublicKey, &'static str> {
   }
   let mut bytes = [0; 32];
   for i in 0..bytes.len() {
-    bytes[i] = u8::from_str_radix(&s[i*2..i*2 + 2], 16).expect("Invalid hex");
+    bytes[i] = u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).expect("Invalid hex");
   }
   encrypt::PublicKey::from_slice(&bytes).ok_or("Pkey is invalid")
 }

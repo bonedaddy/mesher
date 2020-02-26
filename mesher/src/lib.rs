@@ -48,7 +48,5 @@ pub mod prelude {
   //! use mesher::prelude::*;
   //! ```
 
-  pub use crate::{
-    fail, Mesher, Message, Packet, Transport, crypto::*,
-  };
+  pub use crate::{crypto::*, fail, Mesher, Message, Packet, Transport};
 }
