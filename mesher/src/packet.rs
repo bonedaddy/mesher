@@ -205,9 +205,17 @@ impl Packet {
   ///
   /// See [`Chunk::decrypt`](enum.Chunk.html#method.decrypt) for more information.
   pub(crate) fn from_bytes(packet: &[u8], keys: &[encrypt::SecretKey]) -> fail::Result<Vec<Chunk>> {
-    bincode::deserialize::<Vec<Vec<u8>>>(packet)
-      .map(|packet| packet.into_iter().map(|c| Chunk::decrypt(c, keys)).collect())
-      .map_err(|_| fail::MesherFail::InvalidPacket)
+    let blocks = bincode::deserialize::<Vec<Vec<Vec<u8>>>>(packet);
+    let mut blocks = match blocks {
+      Ok(blocks) if !blocks.is_empty() => blocks,
+      _ => return Err(fail::MesherFail::InvalidPacket),
+    };
+    let _replies = blocks.split_off(1);
+    let main = blocks.pop().expect("Already validated length before");
+    let main = main
+      .into_iter()
+      .map(|c| Chunk::decrypt(c, keys)).collect();
+    Ok(main)
   }
 
   /// Same as [`Packet::from_bytes`](#method.from_bytes) but only decrypts chunks signed with one of the valid keys.
@@ -215,15 +223,17 @@ impl Packet {
     packet: &[u8],
     keys: &[encrypt::SecretKey],
     sender_keys: &[sign::PublicKey],
-  ) -> fail::Result<Vec<Chunk>> {
-    bincode::deserialize::<Vec<Vec<u8>>>(packet)
-      .map(|packet| {
-        packet
-          .into_iter()
-          .map(|c| Chunk::decrypt_signed(c, keys, sender_keys))
-          .collect()
-      })
-      .map_err(|_| fail::MesherFail::InvalidPacket)
+  ) -> fail::Result<Vec<Chunk>> {    let blocks = bincode::deserialize::<Vec<Vec<Vec<u8>>>>(packet);
+    let mut blocks = match blocks {
+      Ok(blocks) if !blocks.is_empty() => blocks,
+      _ => return Err(fail::MesherFail::InvalidPacket),
+    };
+    let _replies = blocks.split_off(1);
+    let main = blocks.pop().expect("Already validated length before");
+    let main = main
+      .into_iter()
+      .map(|c| Chunk::decrypt_signed(c, keys, sender_keys)).collect();
+    Ok(main)
   }
 }
 
