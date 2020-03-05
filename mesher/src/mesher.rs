@@ -107,7 +107,6 @@ impl Mesher {
       match piece {
         crate::packet::Chunk::Message(m, r) => messages.push(Message { contents: m, reply_path: r }),
         crate::packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
-        crate::packet::Chunk::Encrypted(_) => (), // piece not meant for us
       }
     }
     Ok(messages)

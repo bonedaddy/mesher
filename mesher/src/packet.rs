@@ -35,19 +35,6 @@ impl InputChunk {
       }
     }
   }
-
-  /// Convert this chunk to a raw byte form, then encrypt those to the public key.
-  ///
-  /// Should be considered a black box, as the format may change in the future.
-  /// It will, of course, always be decryptable (assuming the keys match) by [`Chunk::decrypt`](#method.decrypt)
-  fn encrypt(self, target_key: &encrypt::PublicKey) -> Vec<u8> {
-    encrypt::seal(&self.serialize(), target_key)
-  }
-
-  /// Same as [`Chunk::encrypt`](#method.encrypt), but will also sign with the sender key.
-  fn encrypt_and_sign(self, target_key: &encrypt::PublicKey, sender_key: &sign::SecretKey) -> Vec<u8> {
-    sign::sign(&encrypt::seal(&self.serialize(), target_key), sender_key)
-  }
 }
 
 /// One piece of a packet being parsed on receipt.
@@ -57,8 +44,6 @@ pub(crate) enum Chunk {
   Message(Vec<u8>, Option<Arc<Vec<Vec<u8>>>>),
   /// A path to send this packet along
   Transport(String),
-  /// A chunk we couldn't decrypt (meant for someone else)
-  Encrypted(Vec<u8>),
 }
 
 impl Chunk {
@@ -77,39 +62,6 @@ impl Chunk {
         String::from_utf8(from.drain(1..).collect()).map_err(|_| ())?,
       )),
       _ => Err(()),
-    }
-  }
-
-  /// Decrypt a chunk of bytes with all of our keys.
-  /// Returns the chunk decrypted with the first key that worked.
-  /// If none of them work, returns [`Chunk::Encrypted`](#variant.Encrypted).
-  ///
-  /// Expect the input format to this to be a black box.
-  /// Give it things encrypted with [`Chunk::encrypt`](#method.encrypt).
-  fn decrypt(bytes: Vec<u8>, replies: &[Arc<Vec<Vec<u8>>>], keys: &[encrypt::SecretKey]) -> Chunk {
-    for key in keys {
-      if let Ok(dec) = encrypt::open(&bytes, key) {
-        if let Ok(des) = Self::deserialize(dec, replies) {
-          return des;
-        }
-      }
-    }
-    Chunk::Encrypted(bytes)
-  }
-
-  /// Same as [`Chunk::decrypt`](#method.decrypt) but will check signatures against the list of signing keys.
-  fn decrypt_signed(bytes: Vec<u8>, replies: &[Arc<Vec<Vec<u8>>>], enc_keys: &[encrypt::SecretKey], sign_keys: &[sign::PublicKey]) -> Chunk {
-    let veried = match sign_keys.iter().find_map(|k| sign::verify(&bytes, k).ok()) {
-      Some(v) => v,
-      None => return Chunk::Encrypted(bytes),
-    };
-    let decd = match enc_keys.iter().find_map(|k| encrypt::open(&veried, k).ok()) {
-      Some(d) => d,
-      None => return Chunk::Encrypted(bytes),
-    };
-    match Self::deserialize(decd, replies) {
-      Ok(d) => d,
-      Err(_) => Chunk::Encrypted(bytes),
     }
   }
 }
@@ -165,9 +117,11 @@ impl Packet {
   }
 
   fn add_instruction(&mut self, block: Option<u8>, instruct: InputChunk, target_pkey: &encrypt::PublicKey) {
+    let bytes = instruct.serialize();
+    let bytes = encrypt::seal(&bytes, &target_pkey);
     let bytes = match &self.signing_key {
-      Some(signing_key) => instruct.encrypt_and_sign(target_pkey, signing_key),
-      None => instruct.encrypt(target_pkey),
+      Some(key) => sign::sign(&bytes, key),
+      None => bytes,
     };
     match block {
       None => &mut self.main_path,
@@ -219,11 +173,12 @@ impl Packet {
       Ok(blocks) if !blocks.is_empty() => blocks,
       _ => return Err(fail::MesherFail::InvalidPacket),
     };
-    let replies: Vec<_> = blocks.split_off(1).into_iter().map(Arc::new).collect();
+    let reply_blocks: Vec<_> = blocks.split_off(1).into_iter().map(Arc::new).collect();
     let main = blocks.pop().expect("Already validated length before");
     let main = main
       .into_iter()
-      .map(|c| Chunk::decrypt(c, &replies, keys))
+      .filter_map(|b| keys.iter().find_map(|k| encrypt::open(&b, k).ok()))
+      .filter_map(|c| Chunk::deserialize(c, &reply_blocks).ok())
       .collect();
     Ok(main)
   }
@@ -239,11 +194,13 @@ impl Packet {
       Ok(blocks) if !blocks.is_empty() => blocks,
       _ => return Err(fail::MesherFail::InvalidPacket),
     };
-    let replies: Vec<_> = blocks.split_off(1).into_iter().map(Arc::new).collect();
+    let reply_blocks: Vec<_> = blocks.split_off(1).into_iter().map(Arc::new).collect();
     let main = blocks.pop().expect("Already validated length before");
     let main = main
       .into_iter()
-      .map(|c| Chunk::decrypt_signed(c, &replies, keys, sender_keys))
+      .filter_map(|b| sender_keys.iter().find_map(|k| sign::verify(&b, k).ok()))
+      .filter_map(|b| keys.iter().find_map(|k| encrypt::open(&b, k).ok()))
+      .filter_map(|c| Chunk::deserialize(c, &reply_blocks).ok())
       .collect();
     Ok(main)
   }
@@ -252,17 +209,6 @@ impl Packet {
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  // "borrowed" from https://doc.rust-lang.org/src/core/macros/mod.rs.html#264-271
-  // TODO: Delete this once it's part of std
-  macro_rules! matches {
-    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
-      match $expression {
-        $( $pattern )|+ $( if $guard )? => true,
-        _ => false
-      }
-    }
-  }
 
   #[test]
   fn unsigned_serialized_deserializable() {
@@ -276,11 +222,9 @@ mod tests {
 
     let dec1 = Packet::deserialize(&packet, &[sk1]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
-    assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::deserialize(&packet, &[sk2]).expect("Failed to deserialize packets");
     assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
-    assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 
   #[test]
@@ -296,11 +240,9 @@ mod tests {
 
     let dec1 = Packet::deserialize_signed(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
-    assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
     let dec2 = Packet::deserialize_signed(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
     assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
-    assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
 
   #[test]
