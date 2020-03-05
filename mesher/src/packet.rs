@@ -127,16 +127,6 @@ impl<'packet> ReplyPathHandle<'packet> {
     self.1.add_instruction(Some(self.0), InputChunk::Transport(path), node_pkey)
   }
 
-  /// Instructs anyone who gets a reply sent along this path how to reply.
-  /// 
-  /// This can "nest" infinitely, but that's only rarely useful.
-  /// If you're replying back to whoever sent you the message, they constructed a path before, and can do it again.
-  /// 
-  /// Nest is in scare-quotes because, in the packet, there is no nesting -- it's treated like any other reply block.
-  pub fn add_reply_path(&mut self) -> Option<ReplyPathHandle> {
-    self.1.add_reply_path()
-  }
-
   /// Adds a message to the packet, for the node with the right skey to read, and to reply along the given path.
   pub fn use_for_message(&mut self, data: &[u8], node_pkey: &encrypt::PublicKey) {
     self.1.add_instruction(None, InputChunk::Message(data.to_vec(), Some(self.0)), node_pkey)
@@ -204,7 +194,7 @@ impl Packet {
   }
 
   /// Serializes the packet into a sendable format.
-  pub(crate) fn into_bytes(mut self) -> fail::Result<Vec<u8>> {
+  pub(crate) fn serialize(mut self) -> fail::Result<Vec<u8>> {
     let mut rng = thread_rng();
     let mut paths = Vec::with_capacity(self.reply_paths.len() + 1);
     self.main_path.shuffle(&mut rng);
@@ -222,7 +212,7 @@ impl Packet {
   /// composed of [`Chunk::Encrypted`](enum.Chunk.html#variant.Encrypted).
   ///
   /// See [`Chunk::decrypt`](enum.Chunk.html#method.decrypt) for more information.
-  pub(crate) fn from_bytes(packet: &[u8], keys: &[encrypt::SecretKey]) -> fail::Result<Vec<Chunk>> {
+  pub(crate) fn deserialize(packet: &[u8], keys: &[encrypt::SecretKey]) -> fail::Result<Vec<Chunk>> {
     let blocks = bincode::deserialize::<Vec<Vec<Vec<u8>>>>(packet);
     let mut blocks = match blocks {
       Ok(blocks) if !blocks.is_empty() => blocks,
@@ -238,7 +228,7 @@ impl Packet {
   }
 
   /// Same as [`Packet::from_bytes`](#method.from_bytes) but only decrypts chunks signed with one of the valid keys.
-  pub(crate) fn from_signed_bytes(
+  pub(crate) fn deserialize_signed(
     packet: &[u8],
     keys: &[encrypt::SecretKey],
     sender_keys: &[sign::PublicKey],
@@ -281,13 +271,13 @@ mod tests {
     let mut packet = Packet::unsigned();
     packet.add_hop("hello".to_owned(), &pk1);
     packet.add_message(&[1, 2, 3], &pk2);
-    let packet = packet.into_bytes().expect("Failed to serialize packet");
+    let packet = packet.serialize().expect("Failed to serialize packet");
 
-    let dec1 = Packet::from_bytes(&packet, &[sk1]).expect("Failed to deserialize packets");
+    let dec1 = Packet::deserialize(&packet, &[sk1]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
     assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
-    let dec2 = Packet::from_bytes(&packet, &[sk2]).expect("Failed to deserialize packets");
+    let dec2 = Packet::deserialize(&packet, &[sk2]).expect("Failed to deserialize packets");
     assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
     assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
@@ -301,13 +291,13 @@ mod tests {
     let mut packet = Packet::signed(sks);
     packet.add_hop("hello".to_owned(), &pk1);
     packet.add_message(&[1, 2, 3], &pk2);
-    let packet = packet.into_bytes().expect("Failed to serialize packet");
+    let packet = packet.serialize().expect("Failed to serialize packet");
 
-    let dec1 = Packet::from_signed_bytes(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
+    let dec1 = Packet::deserialize_signed(&packet, &[sk1], &[pks]).expect("Failed to deserialize packets");
     assert!(dec1.contains(&Chunk::Transport("hello".to_owned())));
     assert!(dec1.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
 
-    let dec2 = Packet::from_signed_bytes(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
+    let dec2 = Packet::deserialize_signed(&packet, &[sk2], &[pks]).expect("Failed to deserialize packets");
     assert!(dec2.contains(&Chunk::Message(vec![1, 2, 3], None)));
     assert!(dec2.iter().any(|c| matches!(c, Chunk::Encrypted(_))));
   }
@@ -325,10 +315,6 @@ mod tests {
     let mut rh1 = packet.add_reply_path().expect("Failed to add reply handle 1");
     rh1.add_hop("foo2".to_owned(), &pk);
     rh1.use_for_message(&[2], &pk);
-
-    let mut rh1_1 = rh1.add_reply_path().expect("Failed to add reply handle 1-1");
-    rh1_1.add_hop("foo3".to_owned(), &pk);
-    rh1_1.use_for_message(&[3], &pk);
 
     let mut rh2 = packet.add_reply_path().expect("Failed to add reply handle 2");
     rh2.add_hop("foo4".to_owned(), &pk);
@@ -357,10 +343,10 @@ mod tests {
       rh2.use_for_message(&[4], &pk);
       rh2.use_for_message(&[5], &pk);
       
-      packet.into_bytes().expect("Failed to serialize packet")
+      packet.serialize().expect("Failed to serialize packet")
     };
     
-    let deser = Packet::from_bytes(&bytes, &[sk]).expect("Failed to deserialize");
+    let deser = Packet::deserialize(&bytes, &[sk]).expect("Failed to deserialize");
     let mut messages = HashMap::new();
     for chunk in deser {
       if let Chunk::Message(data, rep) = chunk {
@@ -405,10 +391,10 @@ mod tests {
       rh2.use_for_message(&[4], &rpk);
       rh2.use_for_message(&[5], &rpk);
       
-      packet.into_bytes().expect("Failed to serialize packet")
+      packet.serialize().expect("Failed to serialize packet")
     };
     
-    let deser = Packet::from_signed_bytes(&bytes, &[rsk], &[spk]).expect("Failed to deserialize");
+    let deser = Packet::deserialize_signed(&bytes, &[rsk], &[spk]).expect("Failed to deserialize");
     let mut messages = HashMap::new();
     for chunk in deser {
       if let Chunk::Message(data, rep) = chunk {

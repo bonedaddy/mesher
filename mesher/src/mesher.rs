@@ -1,12 +1,16 @@
 //! Contains all the relevant bits and pieces for meshers themselves.
 
 use crate::prelude::*;
-use std::collections::HashMap;
+use std::{
+  collections::HashMap,
+  sync::Arc,
+};
 
 /// Represents a single message received by a mesher.
 #[derive(Debug, PartialEq)]
 pub struct Message {
   contents: Vec<u8>,
+  reply_path: Option<Arc<Vec<Vec<u8>>>>,
 }
 
 impl Message {
@@ -60,14 +64,6 @@ impl Mesher {
     }
   }
 
-  /// Adds a transport to the mesher, for it to send and receive data through.
-  /// The scheme is passed to the transport exactly as-is.
-  /// If an initialization error occurs in the transport, nothing is added to the internal scheme mapping.
-  pub fn add_transport<T: Transport + 'static>(&mut self, scheme: &str) -> fail::Result<()> {
-    self.transports.insert(scheme.to_owned(), Box::new(T::new(scheme)?));
-    Ok(())
-  }
-
   /// Does the massaging necessary to get the transport based on the scheme in the path.
   /// Will return the appropriate errors if any of it fails.
   #[allow(clippy::borrowed_box)] // because we can't easily massage &mut Box<T> into &mut T, apparently
@@ -83,13 +79,6 @@ impl Mesher {
       .ok_or(fail::MesherFail::UnregisteredScheme(scheme))
   }
 
-  /// Has the mesher listen on the given path for messages.
-  /// This determines the transport to connect to based on the scheme, then just tells it to listen.
-  /// The exact behavior depends on the transport, but will generally involve either setting up some listener, or adding it to a list of internal paths to poll.
-  pub fn listen_on(&mut self, path: &str) -> fail::Result<()> {
-    self.get_transport_for_path(path)?.listen(path.to_owned())
-  }
-
   /// Does everything you'd expect when mesher receives a packet:
   ///
   /// - Attempts to decrypt every line in the packet
@@ -99,14 +88,14 @@ impl Mesher {
   /// It will try to use _all_ of the secret keys associated with the mesher to decrypt the packet.
   fn process_packet(&mut self, pkt: Vec<u8>) -> fail::Result<Vec<Message>> {
     let dis = if self.sender_pkeys.is_empty() {
-      Packet::from_bytes(&pkt, &self.own_skeys)?
+      Packet::deserialize(&pkt, &self.own_skeys)?
     } else {
-      Packet::from_signed_bytes(&pkt, &self.own_skeys, &self.sender_pkeys)?
+      Packet::deserialize_signed(&pkt, &self.own_skeys, &self.sender_pkeys)?
     };
     let mut messages = vec![];
     for piece in dis {
       match piece {
-        crate::packet::Chunk::Message(m, _) => messages.push(Message { contents: m }),
+        crate::packet::Chunk::Message(m, r) => messages.push(Message { contents: m, reply_path: r }),
         crate::packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
         crate::packet::Chunk::Encrypted(_) => (), // piece not meant for us
       }
@@ -114,17 +103,32 @@ impl Mesher {
     Ok(messages)
   }
 
-  /// Sends a packet out.
-  /// Note that the packet is not processed, so any instructions meant for this mesher will not be seen (unless the packet comes back, of course)
-  pub fn launch(&mut self, packet: Packet, first_hop: &str) -> fail::Result<()> {
-    self.bounce(&packet.into_bytes()?, first_hop)
-  }
-
   // Sends the given bytes along the given path, getting the appropriate transport.
   fn bounce(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
     let transport = self.get_transport_for_path(path)?;
     transport.send(path.to_owned(), packet.to_vec())?;
     Ok(())
+  }
+
+  /// Adds a transport to the mesher, for it to send and receive data through.
+  /// The scheme is passed to the transport exactly as-is.
+  /// If an initialization error occurs in the transport, nothing is added to the internal scheme mapping.
+  pub fn add_transport<T: Transport + 'static>(&mut self, scheme: &str) -> fail::Result<()> {
+    self.transports.insert(scheme.to_owned(), Box::new(T::new(scheme)?));
+    Ok(())
+  }
+
+  /// Has the mesher listen on the given path for messages.
+  /// This determines the transport to connect to based on the scheme, then just tells it to listen.
+  /// The exact behavior depends on the transport, but will generally involve either setting up some listener, or adding it to a list of internal paths to poll.
+  pub fn listen_on(&mut self, path: &str) -> fail::Result<()> {
+    self.get_transport_for_path(path)?.listen(path.to_owned())
+  }
+
+  /// Sends a packet out.
+  /// Note that the packet is not processed, so any instructions meant for this mesher will not be seen (unless the packet comes back, of course)
+  pub fn launch(&mut self, packet: Packet, first_hop: &str) -> fail::Result<()> {
+    self.bounce(&packet.serialize()?, first_hop)
   }
 
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.
