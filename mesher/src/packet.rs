@@ -138,6 +138,7 @@ impl<'packet> ReplyPathHandle<'packet> {
 /// Note that each piece of the packet is associated with a key.
 /// The keys don't have to be unique -- more than one piece can be associated with a single key.
 /// For example, if a node is meant to both receive a message and transport the packet further, those two might be encrypted with the same key.
+#[derive(Clone)]
 pub struct Packet {
   pub(crate) main_path: Vec<Vec<u8>>,
   pub(crate) reply_paths: Vec<Vec<Vec<u8>>>,

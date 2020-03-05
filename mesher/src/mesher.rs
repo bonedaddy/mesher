@@ -18,6 +18,16 @@ impl Message {
   pub fn contents(&self) -> &[u8] {
     &self.contents
   }
+
+  /// Get the contents of the message, discarding the `Message` struct.
+  pub fn into_contents(self) -> Vec<u8> {
+    self.contents
+  }
+
+  /// Whether or not this message was sent with a reply path for it to follow.
+  pub fn has_reply_path(&self) -> bool {
+    self.reply_path.is_some()
+  }
 }
 
 /// The control interface for a single mesher.
