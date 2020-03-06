@@ -26,7 +26,11 @@ fn main() {
       match std::str::from_utf8(contents) {
         Ok(s) if s.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) => {
           println!("Text message received:");
-          println!("{}", s);
+          if s.ends_with('\n') {
+            print!("{}", s);
+          } else {
+            println!("{}", s);
+          }
           println!("---");
           println!("({} chars)", s.len())
         }

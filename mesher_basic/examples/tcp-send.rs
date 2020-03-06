@@ -27,7 +27,10 @@ fn main() {
     .read_to_end(&mut data)
     .expect("Failed to read from STDIN");
 
-  println!("\n---\nSending {} bytes...", data.len());
+  if !data.ends_with(&['\n' as u8]) {
+    println!();
+  }
+  println!("Sending {} bytes...", data.len());
   let mut m = Mesher::unsigned(vec![]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
   let mut packet = Packet::unsigned();
