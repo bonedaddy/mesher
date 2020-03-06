@@ -25,8 +25,8 @@ fn direct() {
 
   sleep(Duration::from_millis(100));
 
-  let recvd = m_dest.recv().expect("failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
-  assert_eq!(vec![vec![1, 2, 3]], recvd);
+  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  assert_eq!(vec![vec![1, 2, 3]], received);
 }
 
 #[test]
@@ -42,11 +42,11 @@ fn one_hop() {
   println!("Message sent");
 
   sleep(Duration::from_millis(100));
-  m_bounce.recv().expect("failed to bounce");
+  m_bounce.receive().expect("failed to bounce");
   sleep(Duration::from_millis(100));
 
-  let recvd = m_dest.recv().expect("failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
-  assert_eq!(vec![vec![1, 2, 3]], recvd);
+  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  assert_eq!(vec![vec![1, 2, 3]], received);
 }
 
 #[test]
@@ -64,11 +64,11 @@ fn two_hops() {
   println!("Message sent");
 
   sleep(Duration::from_millis(100));
-  m_bounce1.recv().expect("failed to bounce");
+  m_bounce1.receive().expect("failed to bounce");
   sleep(Duration::from_millis(100));
-  m_bounce2.recv().expect("failed to bounce");
+  m_bounce2.receive().expect("failed to bounce");
   sleep(Duration::from_millis(100));
 
-  let recvd = m_dest.recv().expect("failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
-  assert_eq!(vec![vec![1, 2, 3]], recvd);
+  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  assert_eq!(vec![vec![1, 2, 3]], received);
 }

@@ -141,7 +141,7 @@ impl Mesher {
   }
 
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.
-  pub fn recv(&mut self) -> fail::Result<Vec<Message>> {
+  pub fn receive(&mut self) -> fail::Result<Vec<Message>> {
     if self.own_skeys.is_empty() {
       return Err(fail::MesherFail::NoKeys);
     }
@@ -162,10 +162,10 @@ mod tests {
   use super::*;
 
   #[test]
-  fn empty_mesher_fails_recv() {
+  fn empty_mesher_fails_receive() {
     let mut empty = Mesher::unsigned(vec![]);
 
-    match empty.recv() {
+    match empty.receive() {
       Err(fail::MesherFail::NoKeys) => (),
       _ => unreachable!(),
     }

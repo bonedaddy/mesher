@@ -75,8 +75,8 @@ mod tests {
 
     t.listen("inmem:1".to_owned()).expect("Failed to listen");
     t.send("inmem:1".to_owned(), vec![1, 2, 3, 4]).expect("Failed to send");
-    let recvd = t.receive().expect("Failed to receive");
-    assert_eq!(recvd, vec![vec![1, 2, 3, 4]]);
+    let received = t.receive().expect("Failed to receive");
+    assert_eq!(received, vec![vec![1, 2, 3, 4]]);
   }
 
   #[test]
@@ -86,8 +86,8 @@ mod tests {
     t.listen("inmem:2".to_owned()).expect("Failed to listen");
     t.send("inmem:2".to_owned(), vec![1, 2, 3, 4]).expect("Failed to send");
     t.send("inmem:2".to_owned(), vec![5, 6, 7, 8]).expect("Failed to send");
-    let recvd = t.receive().expect("Failed to receive");
-    assert_eq!(recvd, vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8]]);
+    let received = t.receive().expect("Failed to receive");
+    assert_eq!(received, vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8]]);
   }
 
   #[test]
@@ -97,8 +97,8 @@ mod tests {
     t.send("inmem:3".to_owned(), vec![9, 10, 11, 12])
       .expect("Failed to send");
     t.listen("inmem:3".to_owned()).expect("Failed to listen");
-    let recvd = t.receive().expect("Failed to receive");
-    assert_eq!(recvd, vec![vec![9, 10, 11, 12]]);
+    let received = t.receive().expect("Failed to receive");
+    assert_eq!(received, vec![vec![9, 10, 11, 12]]);
   }
 
   #[test]
@@ -106,7 +106,7 @@ mod tests {
     let mut t = InMemory::new("inmem").expect("Failed to create");
 
     t.listen("inmem:4".to_owned()).expect("Failed to listen");
-    let recvd = t.receive().expect("Failed to receive");
-    assert_eq!(recvd, Vec::<Vec<u8>>::new());
+    let received = t.receive().expect("Failed to receive");
+    assert_eq!(received, Vec::<Vec<u8>>::new());
   }
 }

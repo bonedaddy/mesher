@@ -21,7 +21,7 @@ fn direct() {
 
   m_root.launch(packet, "mock:direct_dest").expect("Failed to send");
 
-  let msgs = m_dest.recv().expect("Failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = m_dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }
@@ -41,9 +41,9 @@ fn one_hop() {
   m_root.launch(packet, "mock:onehop_n1").expect("Failed to send");
 
   // will bounce the message along to m_dest
-  m_n1.recv().expect("Failed to receive");
+  m_n1.receive().expect("Failed to receive");
 
-  let msgs = m_dest.recv().expect("Failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = m_dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }
@@ -65,11 +65,11 @@ fn two_hops() {
   m_root.launch(packet, "mock:twohops_n1").expect("Failed to send");
 
   // will bounce the message along to m_n2
-  m_n1.recv().expect("Failed to receive");
+  m_n1.receive().expect("Failed to receive");
   // will bounce the message along to m_dest
-  m_n2.recv().expect("Failed to receive");
+  m_n2.receive().expect("Failed to receive");
 
-  let msgs = m_dest.recv().expect("Failed to recv").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = m_dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }

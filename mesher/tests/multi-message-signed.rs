@@ -24,11 +24,11 @@ fn direct() {
   sender.launch(packet.clone(), "inmem:direct_dest1").expect("failed to launch to dest1");
   sender.launch(packet.clone(), "inmem:direct_dest2").expect("failed to launch to dest2");
 
-  let recvd1 = dest1.recv().expect("failed to recv at 1");
-  assert_eq!(vec![vec![1]], recvd1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received1 = dest1.receive().expect("failed to receive at 1");
+  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
 
-  let recvd2 = dest2.recv().expect("failed to recv at 2");
-  assert_eq!(vec![vec![2]], recvd2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received2 = dest2.receive().expect("failed to receive at 2");
+  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
 }
 
 #[test]
@@ -49,13 +49,13 @@ fn one_hop() {
   sender.launch(packet.clone(), "inmem:onehop_im").expect("failed to launch to dest2");
 
   // will bounce the message along to dest1 and dest2
-  im.recv().expect("failed to recv at im");
+  im.receive().expect("failed to receive at im");
 
-  let recvd1 = dest1.recv().expect("failed to recv at 1");
-  assert_eq!(vec![vec![1]], recvd1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received1 = dest1.receive().expect("failed to receive at 1");
+  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
 
-  let recvd2 = dest2.recv().expect("failed to recv at 2");
-  assert_eq!(vec![vec![2]], recvd2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received2 = dest2.receive().expect("failed to receive at 2");
+  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
 }
 
 #[test]
@@ -78,13 +78,13 @@ fn two_hop() {
   sender.launch(packet.clone(), "inmem:twohops_im1").expect("failed to launch to dest2");
 
   // will bounce the message along to im2
-  im1.recv().expect("failed to recv at im1");
+  im1.receive().expect("failed to receive at im1");
   // will bounce the message along to dest1 and dest2
-  im2.recv().expect("failed to recv at im2");
+  im2.receive().expect("failed to receive at im2");
 
-  let recvd1 = dest1.recv().expect("failed to recv at 1");
-  assert_eq!(vec![vec![1]], recvd1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received1 = dest1.receive().expect("failed to receive at 1");
+  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
 
-  let recvd2 = dest2.recv().expect("failed to recv at 2");
-  assert_eq!(vec![vec![2]], recvd2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  let received2 = dest2.receive().expect("failed to receive at 2");
+  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
 }

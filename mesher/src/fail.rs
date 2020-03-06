@@ -34,7 +34,7 @@ pub enum MesherFail {
 
   /// The transport being asked to send data along a path wasn't able to.
   ///
-  /// This can trigger during calls to [`Mesher::recv`](../struct.Mesher.html), since it will send packets as requested while parsing them.
+  /// This can trigger during calls to [`Mesher::receive`](../struct.Mesher.html#method.receive), since it will send packets as requested while parsing them.
   SendFailure(String),
 
   /// The transport being asked to listen along a path wasn't able to.
