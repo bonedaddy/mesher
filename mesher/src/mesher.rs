@@ -140,6 +140,11 @@ impl Mesher {
     self.bounce(&packet.serialize()?, first_hop)
   }
 
+  /// Replies to a previously received message
+  pub fn reply(&mut self, data: &[u8], reply_to: &Message) -> fail::Result<()> {
+    
+  }
+
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.
   pub fn receive(&mut self) -> fail::Result<Vec<Message>> {
     if self.own_skeys.is_empty() {

@@ -66,25 +66,6 @@ impl Chunk {
   }
 }
 
-pub struct ReplyPathHandle<'packet>(u8, &'packet mut Packet);
-
-impl<'packet> ReplyPathHandle<'packet> {
-  /// Adds a message to the packet, for the node with the right skey to read.
-  pub fn add_message<'handle>(&'handle mut self, data: &[u8], node_pkey: &encrypt::PublicKey, reply: Option<ReplyPathHandle<'handle>>) {
-    self.1.add_instruction(Some(self.0), InputChunk::Message(data.to_vec(), reply.map(|h| h.0)), node_pkey)
-  }
-
-  /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
-  pub fn add_hop(&mut self, path: String, node_pkey: &encrypt::PublicKey) {
-    self.1.add_instruction(Some(self.0), InputChunk::Transport(path), node_pkey)
-  }
-
-  /// Adds a message to the packet, for the node with the right skey to read, and to reply along the given path.
-  pub fn use_for_message(&mut self, data: &[u8], node_pkey: &encrypt::PublicKey) {
-    self.1.add_instruction(None, InputChunk::Message(data.to_vec(), Some(self.0)), node_pkey)
-  }
-}
-
 /// Represents a packet to be sent out.
 ///
 /// Note that each piece of the packet is associated with a key.
@@ -93,7 +74,7 @@ impl<'packet> ReplyPathHandle<'packet> {
 #[derive(Clone)]
 pub struct Packet {
   pub(crate) main_path: Vec<Vec<u8>>,
-  pub(crate) reply_paths: Vec<Vec<Vec<u8>>>,
+  pub(crate) reply_packets: Vec<Packet>,
   pub(crate) signing_key: Option<sign::SecretKey>,
 }
 
@@ -102,7 +83,7 @@ impl Packet {
   pub fn unsigned() -> Packet {
     Packet {
       main_path: vec![],
-      reply_paths: vec![],
+      reply_packets: vec![],
       signing_key: None,
     }
   }
@@ -111,52 +92,48 @@ impl Packet {
   pub fn signed(skey: sign::SecretKey) -> Packet {
     Packet {
       main_path: vec![],
-      reply_paths: vec![],
+      reply_packets: vec![],
       signing_key: Some(skey),
     }
   }
 
-  fn add_instruction(&mut self, block: Option<u8>, instruct: InputChunk, target_pkey: &encrypt::PublicKey) {
+  fn add_instruction(&mut self, instruct: InputChunk, target_pkey: &encrypt::PublicKey) {
     let bytes = instruct.serialize();
     let bytes = encrypt::seal(&bytes, &target_pkey);
     let bytes = match &self.signing_key {
       Some(key) => sign::sign(&bytes, key),
       None => bytes,
     };
-    match block {
-      None => &mut self.main_path,
-      Some(idx) => &mut self.reply_paths[idx as usize],
-    }.push(bytes);
+    self.main_path.push(bytes);
   }
 
   /// Adds a message to the packet, for the node with the right skey to read.
   pub fn add_message(&mut self, data: &[u8], node_pkey: &encrypt::PublicKey) {
-    self.add_instruction(None, InputChunk::Message(data.to_vec(), None), node_pkey)
+    self.add_instruction(InputChunk::Message(data.to_vec(), None), node_pkey)
   }
 
   /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
   pub fn add_hop(&mut self, path: String, node_pkey: &encrypt::PublicKey) {
-    self.add_instruction(None, InputChunk::Transport(path), node_pkey)
+    self.add_instruction(InputChunk::Transport(path), node_pkey)
   }
 
   /// Starts creating a reply path.
-  pub fn add_reply_path(&mut self) -> Option<ReplyPathHandle> {
-    if self.reply_paths.len() == u8::max_value() as usize {
+  pub fn add_reply_path(&mut self, reply_path: Packet) -> Option<&mut Packet> {
+    if self.reply_packets.len() == u8::max_value() as usize {
       return None;
     }
-    self.reply_paths.push(vec![]);
-    Some(ReplyPathHandle(self.reply_paths.len() as u8 - 1, self))
+    self.reply_packets.push(reply_path);
+    Some(self.reply_packets.last_mut().expect("just added"))
   }
 
   /// Serializes the packet into a sendable format.
   pub(crate) fn serialize(mut self) -> fail::Result<Vec<u8>> {
     let mut rng = thread_rng();
-    let mut paths = Vec::with_capacity(self.reply_paths.len() + 1);
+    let mut paths = Vec::with_capacity(self.reply_packets.len() + 1);
     self.main_path.shuffle(&mut rng);
     paths.push(self.main_path);
-    for mut path in self.reply_paths {
-      path.shuffle(&mut rng);
-      paths.push(path);
+    for packet in self.reply_packets {
+
     }
     bincode::serialize(&paths).map_err(|e| fail::MesherFail::Other(Box::new(e)))
   }
