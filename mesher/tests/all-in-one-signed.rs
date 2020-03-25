@@ -22,7 +22,12 @@ fn direct() {
 
   root.launch(packet).expect("Failed to send");
 
-  let msgs = dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = dest
+    .receive()
+    .expect("Failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }
@@ -45,7 +50,12 @@ fn one_hop() {
   // will bounce the message along to dest
   n1.receive().expect("Failed to receive");
 
-  let msgs = dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = dest
+    .receive()
+    .expect("Failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }
@@ -72,7 +82,12 @@ fn two_hops() {
   // will bounce the message along to dest
   n2.receive().expect("Failed to receive");
 
-  let msgs = dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let msgs = dest
+    .receive()
+    .expect("Failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
 
   assert_eq!(msgs, vec![vec![1]]);
 }

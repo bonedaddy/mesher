@@ -4,7 +4,9 @@ use mesher::prelude::*;
 fn make_mesher(name: &str, pkey: &sign::PublicKey) -> (Mesher, encrypt::PublicKey) {
   let (pk, sk) = encrypt::gen_keypair();
   let mut mesh = Mesher::signed(vec![sk], vec![pkey.clone()]);
-  mesh.add_transport::<InMemory>("inmem").expect("Failed to add transport");
+  mesh
+    .add_transport::<InMemory>("inmem")
+    .expect("Failed to add transport");
   mesh.listen_on(&format!("inmem:{}", name)).expect("Failed to listen");
   (mesh, pk)
 }

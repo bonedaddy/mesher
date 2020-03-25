@@ -29,7 +29,7 @@ fn send_with_reply() {
   let mut reply_packet = Packet::unsigned();
   reply_packet.reply_to(&message).expect("message had no reply path");
   reply_packet.add_message(&[2], &sender_pk);
-  
+
   receiver.launch(reply_packet).expect("failed to send reply");
 
   let replies = sender.receive().expect("Failed to receive reply");

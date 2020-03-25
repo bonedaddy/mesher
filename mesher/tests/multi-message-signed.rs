@@ -4,7 +4,9 @@ use mesher::prelude::*;
 fn make_mesher(name: &str, pkey: &sign::PublicKey) -> (Mesher, encrypt::PublicKey) {
   let (pk, sk) = encrypt::gen_keypair();
   let mut mesh = Mesher::signed(vec![sk], vec![pkey.clone()]);
-  mesh.add_transport::<InMemory>("inmem").expect("Failed to add transport");
+  mesh
+    .add_transport::<InMemory>("inmem")
+    .expect("Failed to add transport");
   mesh.listen_on(&format!("inmem:{}", name)).expect("Failed to listen");
   (mesh, pk)
 }
@@ -26,10 +28,16 @@ fn direct() {
   sender.launch(packet).expect("failed to launch");
 
   let received1 = dest1.receive().expect("failed to receive at 1");
-  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![1]],
+    received1.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 
   let received2 = dest2.receive().expect("failed to receive at 2");
-  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![2]],
+    received2.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 }
 
 #[test]
@@ -54,10 +62,16 @@ fn one_hop() {
   im.receive().expect("failed to receive at im");
 
   let received1 = dest1.receive().expect("failed to receive at 1");
-  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![1]],
+    received1.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 
   let received2 = dest2.receive().expect("failed to receive at 2");
-  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![2]],
+    received2.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 }
 
 #[test]
@@ -86,8 +100,14 @@ fn two_hop() {
   im2.receive().expect("failed to receive at im2");
 
   let received1 = dest1.receive().expect("failed to receive at 1");
-  assert_eq!(vec![vec![1]], received1.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![1]],
+    received1.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 
   let received2 = dest2.receive().expect("failed to receive at 2");
-  assert_eq!(vec![vec![2]], received2.iter().map(|m| m.contents()).collect::<Vec<_>>());
+  assert_eq!(
+    vec![vec![2]],
+    received2.iter().map(|m| m.contents()).collect::<Vec<_>>()
+  );
 }

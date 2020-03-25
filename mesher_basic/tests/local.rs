@@ -8,7 +8,8 @@ fn make_mesher(port: Option<u16>) -> (Mesher, encrypt::PublicKey) {
   let mut m = Mesher::unsigned(vec![sk]);
   m.add_transport::<TCP>("tcp").expect("Failed to add transport");
   if let Some(port) = port {
-    m.listen_on(&format!("tcp:localhost:{}", port)).expect("Failed to listen");
+    m.listen_on(&format!("tcp:localhost:{}", port))
+      .expect("Failed to listen");
   }
   (m, pk)
 }
@@ -26,7 +27,12 @@ fn direct() {
 
   sleep(Duration::from_millis(100));
 
-  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let received = m_dest
+    .receive()
+    .expect("failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
   assert_eq!(vec![vec![1, 2, 3]], received);
 }
 
@@ -47,7 +53,12 @@ fn one_hop() {
   m_bounce.receive().expect("failed to bounce");
   sleep(Duration::from_millis(100));
 
-  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let received = m_dest
+    .receive()
+    .expect("failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
   assert_eq!(vec![vec![1, 2, 3]], received);
 }
 
@@ -72,6 +83,11 @@ fn two_hops() {
   m_bounce2.receive().expect("failed to bounce");
   sleep(Duration::from_millis(100));
 
-  let received = m_dest.receive().expect("failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
+  let received = m_dest
+    .receive()
+    .expect("failed to receive")
+    .into_iter()
+    .map(|m| m.into_contents())
+    .collect::<Vec<_>>();
   assert_eq!(vec![vec![1, 2, 3]], received);
 }

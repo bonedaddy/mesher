@@ -70,18 +70,31 @@ pub struct ReplyPathHandle<'packet>(u8, &'packet mut Packet);
 
 impl<'packet> ReplyPathHandle<'packet> {
   /// Adds a message to the packet, for the node with the right skey to read.
-  pub fn add_message<'handle>(&'handle mut self, data: &[u8], node_pkey: &encrypt::PublicKey, reply: Option<ReplyPathHandle<'handle>>) {
-    self.1.add_instruction(Some(self.0), InputChunk::Message(data.to_vec(), reply.map(|h| h.0)), node_pkey)
+  pub fn add_message<'handle>(
+    &'handle mut self,
+    data: &[u8],
+    node_pkey: &encrypt::PublicKey,
+    reply: Option<ReplyPathHandle<'handle>>,
+  ) {
+    self.1.add_instruction(
+      Some(self.0),
+      InputChunk::Message(data.to_vec(), reply.map(|h| h.0)),
+      node_pkey,
+    )
   }
 
   /// Adds a hop to the packet, so that when it reaches the node with the right skey, it'll get forwarded along the given path.
   pub fn add_hop(&mut self, path: String, node_pkey: &encrypt::PublicKey) {
-    self.1.add_instruction(Some(self.0), InputChunk::Transport(path), node_pkey)
+    self
+      .1
+      .add_instruction(Some(self.0), InputChunk::Transport(path), node_pkey)
   }
 
   /// Adds a message to the packet, for the node with the right skey to read, and to reply along the given path.
   pub fn use_for_message(&mut self, data: &[u8], node_pkey: &encrypt::PublicKey) {
-    self.1.add_instruction(None, InputChunk::Message(data.to_vec(), Some(self.0)), node_pkey)
+    self
+      .1
+      .add_instruction(None, InputChunk::Message(data.to_vec(), Some(self.0)), node_pkey)
   }
 }
 
@@ -116,9 +129,9 @@ impl Packet {
   }
 
   /// If the message has a reply block, adds it to this packet's instructions.
-  /// 
+  ///
   /// If the message doesn't have a reply block, the packet is unchanged.
-  /// 
+  ///
   /// Note that the reply block is pre-encrypted and, if applicable, pre-signed by the original sender.
   /// The contents will **not** be signed, even if this packet is a signed one.
   pub fn reply_to(&mut self, msg: &Message) -> fail::Result<()> {
@@ -141,7 +154,8 @@ impl Packet {
     match block {
       None => &mut self.main_path,
       Some(idx) => &mut self.reply_paths[idx as usize],
-    }.push(bytes);
+    }
+    .push(bytes);
   }
 
   /// Adds a message to the packet, for the node with the right skey to read.
@@ -269,7 +283,7 @@ mod tests {
 
     packet.add_hop("foo1".to_owned(), &pk);
     packet.add_message(&[1], &pk);
-    
+
     let mut rh1 = packet.add_reply_path().expect("Failed to add reply handle 1");
     rh1.add_hop("foo2".to_owned(), &pk);
     rh1.use_for_message(&[2], &pk);
@@ -290,7 +304,7 @@ mod tests {
 
       packet.add_hop("foo1".to_owned(), &tpk);
       packet.add_message(&[1], &pk);
-      
+
       let mut rh1 = packet.add_reply_path().expect("Failed to add reply handle 1");
       rh1.add_hop("foo2".to_owned(), &tpk);
       rh1.use_for_message(&[2], &pk);
@@ -300,10 +314,10 @@ mod tests {
       rh2.add_hop("foo4".to_owned(), &tpk);
       rh2.use_for_message(&[4], &pk);
       rh2.use_for_message(&[5], &pk);
-      
+
       packet.serialize().expect("Failed to serialize packet")
     };
-    
+
     let deser = Packet::deserialize(&bytes, &[sk]).expect("Failed to deserialize");
     let mut messages = HashMap::new();
     for chunk in deser {
@@ -338,7 +352,7 @@ mod tests {
 
       packet.add_hop("foo1".to_owned(), &tpk);
       packet.add_message(&[1], &rpk);
-      
+
       let mut rh1 = packet.add_reply_path().expect("Failed to add reply handle 1");
       rh1.add_hop("foo2".to_owned(), &tpk);
       rh1.use_for_message(&[2], &rpk);
@@ -348,10 +362,10 @@ mod tests {
       rh2.add_hop("foo4".to_owned(), &tpk);
       rh2.use_for_message(&[4], &rpk);
       rh2.use_for_message(&[5], &rpk);
-      
+
       packet.serialize().expect("Failed to serialize packet")
     };
-    
+
     let deser = Packet::deserialize_signed(&bytes, &[rsk], &[spk]).expect("Failed to deserialize");
     let mut messages = HashMap::new();
     for chunk in deser {

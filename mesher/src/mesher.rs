@@ -1,10 +1,7 @@
 //! Contains all the relevant bits and pieces for meshers themselves.
 
 use crate::prelude::*;
-use std::{
-  collections::HashMap,
-  sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 /// Represents a single message received by a mesher.
 #[derive(Debug, PartialEq)]
@@ -105,7 +102,10 @@ impl Mesher {
     let mut messages = vec![];
     for piece in dis {
       match piece {
-        crate::packet::Chunk::Message(m, r) => messages.push(Message { contents: m, reply_path: r }),
+        crate::packet::Chunk::Message(m, r) => messages.push(Message {
+          contents: m,
+          reply_path: r,
+        }),
         crate::packet::Chunk::Transport(to) => self.send_data(&pkt, &to)?,
       }
     }
@@ -114,7 +114,9 @@ impl Mesher {
 
   // Sends the given bytes along the given path, getting the appropriate transport.
   fn send_data(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
-    self.get_transport_for_path(path)?.send(path.to_owned(), packet.to_vec())
+    self
+      .get_transport_for_path(path)?
+      .send(path.to_owned(), packet.to_vec())
   }
 
   /// Adds a transport to the mesher, for it to send and receive data through.
@@ -133,7 +135,7 @@ impl Mesher {
   }
 
   /// Sends a packet out.
-  /// 
+  ///
   /// Note that while the outgoing packet is processed like any incoming one, any messages destined for this mesher are ignored.
   pub fn launch(&mut self, packet: Packet) -> fail::Result<()> {
     self.process_packet(packet.serialize()?).map(|_| ())
