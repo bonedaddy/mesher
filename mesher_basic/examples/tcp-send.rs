@@ -16,6 +16,7 @@ fn get_pkey(s: &str) -> Result<encrypt::PublicKey, &'static str> {
 
 fn main() {
   let mut args = std::env::args().skip(1);
+
   let pkey = get_pkey(&args.next().expect("Must provide key")).expect("Invalid key");
   let sock = args.next().unwrap_or("[::1]:18540".to_owned());
 
@@ -31,12 +32,17 @@ fn main() {
     println!();
   }
   println!("Sending {} bytes...", data.len());
+
   let (self_pk, self_sk) = encrypt::gen_keypair();
+
   let mut m = Mesher::unsigned(vec![self_sk]);
   m.add_transport::<TCP>("tcp").expect("Failed to add TCP transport");
+
   let mut packet = Packet::unsigned();
   packet.add_hop(format!("tcp:{}", sock), &self_pk);
   packet.add_message(&data, &pkey);
+
   m.launch(packet).expect("Failed to send data");
+
   println!("Sent! Did you see it get received?");
 }
