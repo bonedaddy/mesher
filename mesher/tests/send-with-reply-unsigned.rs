@@ -11,8 +11,8 @@ fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
 
 #[test]
 fn send_with_reply() {
-  let (mut m_sender, sender_pk) = make_mesher("sender");
-  let (mut m_receiver, receiver_pk) = make_mesher("receiver");
+  let (mut sender, sender_pk) = make_mesher("sender");
+  let (mut receiver, receiver_pk) = make_mesher("receiver");
 
   let mut packet = Packet::unsigned();
   packet.add_hop("inmem:receiver".to_owned(), &sender_pk);
@@ -20,9 +20,9 @@ fn send_with_reply() {
   rh.add_hop("inmem:sender".to_owned(), &receiver_pk);
   rh.use_for_message(&[1], &receiver_pk);
 
-  m_sender.launch(packet).expect("Failed to send message");
+  sender.launch(packet).expect("Failed to send message");
 
-  let messages = m_receiver.receive().expect("Failed to receive message");
+  let messages = receiver.receive().expect("Failed to receive message");
   let message = &messages[0];
   assert_eq!(&[1], message.contents());
 
@@ -30,9 +30,9 @@ fn send_with_reply() {
   reply_packet.reply_to(&message).expect("message had no reply path");
   reply_packet.add_message(&[2], &sender_pk);
   
-  m_receiver.launch(reply_packet).expect("failed to send reply");
+  receiver.launch(reply_packet).expect("failed to send reply");
 
-  let replies = m_sender.receive().expect("Failed to receive reply");
+  let replies = sender.receive().expect("Failed to receive reply");
   let reply = &replies[0];
   assert_eq!(&[2], reply.contents());
 }
