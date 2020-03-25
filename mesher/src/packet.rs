@@ -116,6 +116,22 @@ impl Packet {
     }
   }
 
+  pub(crate) fn from_reply_block(chunks: Vec<Vec<u8>>) -> Packet {
+    Packet {
+      main_path: chunks,
+      reply_paths: vec![],
+      signing_key: None,
+    }
+  }
+
+  pub(crate) fn signed_from_reply_block(chunks: Vec<Vec<u8>>, skey: sign::SecretKey) -> Packet {
+    Packet {
+      main_path: chunks,
+      reply_paths: vec![],
+      signing_key: Some(skey),
+    }
+  }
+
   fn add_instruction(&mut self, block: Option<u8>, instruct: InputChunk, target_pkey: &encrypt::PublicKey) {
     let bytes = instruct.serialize();
     let bytes = encrypt::seal(&bytes, &target_pkey);

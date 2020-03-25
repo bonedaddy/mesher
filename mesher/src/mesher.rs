@@ -106,17 +106,15 @@ impl Mesher {
     for piece in dis {
       match piece {
         crate::packet::Chunk::Message(m, r) => messages.push(Message { contents: m, reply_path: r }),
-        crate::packet::Chunk::Transport(to) => self.bounce(&pkt, &to)?,
+        crate::packet::Chunk::Transport(to) => self.send_data(&pkt, &to)?,
       }
     }
     Ok(messages)
   }
 
   // Sends the given bytes along the given path, getting the appropriate transport.
-  fn bounce(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
-    let transport = self.get_transport_for_path(path)?;
-    transport.send(path.to_owned(), packet.to_vec())?;
-    Ok(())
+  fn send_data(&mut self, packet: &[u8], path: &str) -> fail::Result<()> {
+    self.get_transport_for_path(path)?.send(path.to_owned(), packet.to_vec())
   }
 
   /// Adds a transport to the mesher, for it to send and receive data through.
@@ -137,7 +135,35 @@ impl Mesher {
   /// Sends a packet out.
   /// Note that the packet is not processed, so any instructions meant for this mesher will not be seen (unless the packet comes back, of course)
   pub fn launch(&mut self, packet: Packet, first_hop: &str) -> fail::Result<()> {
-    self.bounce(&packet.serialize()?, first_hop)
+    self.send_data(&packet.serialize()?, first_hop)
+  }
+
+  /// Replies to a previously received message.
+  /// 
+  /// If the reply block includes any messages to *this* mesher, they will be ignored (unless, of course, the packet sent out comes back).
+  pub fn reply(&mut self, replying_to: &Message, data: &[u8], target_pkey: &encrypt::PublicKey) -> fail::Result<()> {
+    let reply_path = match &replying_to.reply_path {
+      None => return Err(fail::MesherFail::NoReplyBlock),
+      Some(path) => path.as_ref().clone(),
+    };
+    let mut pkt = Packet::from_reply_block(reply_path);
+    pkt.add_message(data, target_pkey);
+    self.process_packet(pkt.serialize()?)?;
+    Ok(())
+  }
+
+  /// Replies to a previously received message, signing the reply.
+  /// 
+  /// If the reply block includes any messages to *this* mesher, they will be ignored (unless, of course, the packet sent out comes back).
+  pub fn signed_reply(&mut self, replying_to: &Message, data: &[u8], target_pkey: &encrypt::PublicKey, skey: sign::SecretKey) -> fail::Result<()> {
+    let reply_path = match &replying_to.reply_path {
+      None => return Err(fail::MesherFail::NoReplyBlock),
+      Some(path) => path.as_ref().clone(),
+    };
+    let mut pkt = Packet::signed_from_reply_block(reply_path, skey);
+    pkt.add_message(data, target_pkey);
+    self.process_packet(pkt.serialize()?)?;
+    Ok(())
   }
 
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.

@@ -23,6 +23,8 @@ pub enum MesherFail {
   /// They will be no-ops.
   /// This error means that the packet itself had an invalid structure.
   InvalidPacket,
+  /// You tried to reply to a message that doesn't have a reply block attached.
+  NoReplyBlock,
 
   /// The URL passed as the path to transport a packet along is invalid.
   InvalidURL(String),
