@@ -133,9 +133,10 @@ impl Mesher {
   }
 
   /// Sends a packet out.
-  /// Note that the packet is not processed, so any instructions meant for this mesher will not be seen (unless the packet comes back, of course)
-  pub fn launch(&mut self, packet: Packet, first_hop: &str) -> fail::Result<()> {
-    self.send_data(&packet.serialize()?, first_hop)
+  /// 
+  /// Note that while the outgoing packet is processed like any incoming one, any messages destined for this mesher are ignored.
+  pub fn launch(&mut self, packet: Packet) -> fail::Result<()> {
+    self.process_packet(packet.serialize()?).map(|_| ())
   }
 
   /// Replies to a previously received message.

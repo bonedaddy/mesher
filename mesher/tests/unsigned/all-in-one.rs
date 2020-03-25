@@ -11,13 +11,14 @@ fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
 
 #[test]
 fn direct() {
-  let (mut m_root, _) = make_mesher("direct_root");
+  let (mut m_root, k_src) = make_mesher("direct_root");
   let (mut m_dest, k_dest) = make_mesher("direct_dest");
 
   let mut packet = Packet::unsigned();
+  packet.add_hop("inmem:direct_dest".to_owned(), &k_src);
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "inmem:direct_dest").expect("Failed to send");
+  m_root.launch(packet).expect("Failed to send");
 
   let msgs = m_dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
 
@@ -26,15 +27,16 @@ fn direct() {
 
 #[test]
 fn one_hop() {
-  let (mut m_root, _) = make_mesher("onehop_root");
+  let (mut m_root, k_src) = make_mesher("onehop_root");
   let (mut m_n1, k_n1) = make_mesher("onehop_n1");
   let (mut m_dest, k_dest) = make_mesher("onehop_dest");
 
   let mut packet = Packet::unsigned();
+  packet.add_hop("inmem:onehop_n1".to_owned(), &k_src);
   packet.add_hop("inmem:onehop_dest".to_owned(), &k_n1);
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "inmem:onehop_n1").expect("Failed to send");
+  m_root.launch(packet).expect("Failed to send");
 
   // will bounce the message along to m_dest
   m_n1.receive().expect("Failed to receive");
@@ -46,17 +48,18 @@ fn one_hop() {
 
 #[test]
 fn two_hops() {
-  let (mut m_root, _) = make_mesher("twohops_root");
+  let (mut m_root, k_src) = make_mesher("twohops_root");
   let (mut m_n1, k_n1) = make_mesher("twohops_n1");
   let (mut m_n2, k_n2) = make_mesher("twohops_n2");
   let (mut m_dest, k_dest) = make_mesher("twohops_dest");
 
   let mut packet = Packet::unsigned();
+  packet.add_hop("inmem:twohops_n1".to_owned(), &k_src);
   packet.add_hop("inmem:twohops_n2".to_owned(), &k_n1);
   packet.add_hop("inmem:twohops_dest".to_owned(), &k_n2);
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "inmem:twohops_n1").expect("Failed to send");
+  m_root.launch(packet).expect("Failed to send");
 
   // will bounce the message along to m_n2
   m_n1.receive().expect("Failed to receive");
