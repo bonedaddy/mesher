@@ -10,7 +10,7 @@ use std::{
 #[derive(Debug, PartialEq)]
 pub struct Message {
   contents: Vec<u8>,
-  reply_path: Option<Arc<Vec<Vec<u8>>>>,
+  pub(crate) reply_path: Option<Arc<Vec<Vec<u8>>>>,
 }
 
 impl Message {
@@ -137,34 +137,6 @@ impl Mesher {
   /// Note that while the outgoing packet is processed like any incoming one, any messages destined for this mesher are ignored.
   pub fn launch(&mut self, packet: Packet) -> fail::Result<()> {
     self.process_packet(packet.serialize()?).map(|_| ())
-  }
-
-  /// Replies to a previously received message.
-  /// 
-  /// If the reply block includes any messages to *this* mesher, they will be ignored (unless, of course, the packet sent out comes back).
-  pub fn reply(&mut self, replying_to: &Message, data: &[u8], target_pkey: &encrypt::PublicKey) -> fail::Result<()> {
-    let reply_path = match &replying_to.reply_path {
-      None => return Err(fail::MesherFail::NoReplyBlock),
-      Some(path) => path.as_ref().clone(),
-    };
-    let mut pkt = Packet::from_reply_block(reply_path);
-    pkt.add_message(data, target_pkey);
-    self.process_packet(pkt.serialize()?)?;
-    Ok(())
-  }
-
-  /// Replies to a previously received message, signing the reply.
-  /// 
-  /// If the reply block includes any messages to *this* mesher, they will be ignored (unless, of course, the packet sent out comes back).
-  pub fn signed_reply(&mut self, replying_to: &Message, data: &[u8], target_pkey: &encrypt::PublicKey, skey: sign::SecretKey) -> fail::Result<()> {
-    let reply_path = match &replying_to.reply_path {
-      None => return Err(fail::MesherFail::NoReplyBlock),
-      Some(path) => path.as_ref().clone(),
-    };
-    let mut pkt = Packet::signed_from_reply_block(reply_path, skey);
-    pkt.add_message(data, target_pkey);
-    self.process_packet(pkt.serialize()?)?;
-    Ok(())
   }
 
   /// Gets pending messages from all of the transports along all of the paths they've been told to use.

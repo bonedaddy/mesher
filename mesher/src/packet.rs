@@ -110,25 +110,24 @@ impl Packet {
   /// Creates a packet whose chunks will be signed by the given key.
   pub fn signed(skey: sign::SecretKey) -> Packet {
     Packet {
-      main_path: vec![],
-      reply_paths: vec![],
       signing_key: Some(skey),
+      ..Packet::unsigned()
     }
   }
 
-  pub(crate) fn from_reply_block(chunks: Vec<Vec<u8>>) -> Packet {
-    Packet {
-      main_path: chunks,
-      reply_paths: vec![],
-      signing_key: None,
-    }
-  }
-
-  pub(crate) fn signed_from_reply_block(chunks: Vec<Vec<u8>>, skey: sign::SecretKey) -> Packet {
-    Packet {
-      main_path: chunks,
-      reply_paths: vec![],
-      signing_key: Some(skey),
+  /// If the message has a reply block, adds it to this packet's instructions.
+  /// 
+  /// If the message doesn't have a reply block, the packet is unchanged.
+  /// 
+  /// Note that the reply block is pre-encrypted and, if applicable, pre-signed by the original sender.
+  /// The contents will **not** be signed, even if this packet is a signed one.
+  pub fn reply_to(&mut self, msg: &Message) -> fail::Result<()> {
+    match &msg.reply_path {
+      None => Err(fail::MesherFail::NoReplyBlock),
+      Some(path) => {
+        self.main_path.append(&mut path.as_ref().clone());
+        Ok(())
+      }
     }
   }
 
