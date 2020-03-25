@@ -4,8 +4,8 @@ use mesher::prelude::*;
 fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
   let (pk, sk) = encrypt::gen_keypair();
   let mut m = Mesher::unsigned(vec![sk]);
-  m.add_transport::<InMemory>("mock").expect("failed to add mock");
-  m.listen_on(&format!("mock:{}", name)).expect("failed to listen");
+  m.add_transport::<InMemory>("inmem").expect("failed to add mock");
+  m.listen_on(&format!("inmem:{}", name)).expect("failed to listen");
   (m, pk)
 }
 
@@ -16,10 +16,10 @@ fn send_with_reply() {
 
   let mut packet = Packet::unsigned();
   let mut rh = packet.add_reply_path().expect("Failed to add reply path");
-  rh.add_hop("mock:sender".to_owned(), &pk_receiver);
+  rh.add_hop("inmem:sender".to_owned(), &pk_receiver);
   rh.use_for_message(&[1], &pk_receiver);
 
-  m_sender.launch(packet, "mock:receiver").expect("Failed to send message");
+  m_sender.launch(packet, "inmem:receiver").expect("Failed to send message");
 
   let messages = m_receiver.receive().expect("Failed to receive message");
   let message = &messages[0];

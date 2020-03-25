@@ -4,8 +4,8 @@ use mesher::prelude::*;
 fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
   let (pk, sk) = encrypt::gen_keypair();
   let mut m = Mesher::unsigned(vec![sk]);
-  m.add_transport::<InMemory>("mock").expect("failed to add mock");
-  m.listen_on(&format!("mock:{}", name)).expect("failed to listen");
+  m.add_transport::<InMemory>("inmem").expect("failed to add mock");
+  m.listen_on(&format!("inmem:{}", name)).expect("failed to listen");
   (m, pk)
 }
 
@@ -17,7 +17,7 @@ fn direct() {
   let mut packet = Packet::unsigned();
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "mock:direct_dest").expect("Failed to send");
+  m_root.launch(packet, "inmem:direct_dest").expect("Failed to send");
 
   let msgs = m_dest.receive().expect("Failed to receive").into_iter().map(|m| m.into_contents()).collect::<Vec<_>>();
 
@@ -31,10 +31,10 @@ fn one_hop() {
   let (mut m_dest, k_dest) = make_mesher("onehop_dest");
 
   let mut packet = Packet::unsigned();
-  packet.add_hop("mock:onehop_dest".to_owned(), &k_n1);
+  packet.add_hop("inmem:onehop_dest".to_owned(), &k_n1);
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "mock:onehop_n1").expect("Failed to send");
+  m_root.launch(packet, "inmem:onehop_n1").expect("Failed to send");
 
   // will bounce the message along to m_dest
   m_n1.receive().expect("Failed to receive");
@@ -52,11 +52,11 @@ fn two_hops() {
   let (mut m_dest, k_dest) = make_mesher("twohops_dest");
 
   let mut packet = Packet::unsigned();
-  packet.add_hop("mock:twohops_n2".to_owned(), &k_n1);
-  packet.add_hop("mock:twohops_dest".to_owned(), &k_n2);
+  packet.add_hop("inmem:twohops_n2".to_owned(), &k_n1);
+  packet.add_hop("inmem:twohops_dest".to_owned(), &k_n2);
   packet.add_message(&[1], &k_dest);
 
-  m_root.launch(packet, "mock:twohops_n1").expect("Failed to send");
+  m_root.launch(packet, "inmem:twohops_n1").expect("Failed to send");
 
   // will bounce the message along to m_n2
   m_n1.receive().expect("Failed to receive");
