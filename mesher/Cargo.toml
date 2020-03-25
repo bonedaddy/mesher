@@ -14,6 +14,5 @@ c_api = []
 [dependencies]
 sodiumoxide = "0.2.5"
 rand = "0.7.3"
-serde = "1.0.104"
 bincode = "1.2.1"
 lazy_static = "1.4.0"
