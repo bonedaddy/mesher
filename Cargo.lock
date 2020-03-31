@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "mesher"
-version = "0.1.0"
+version = "0.8.0"
 dependencies = [
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -114,21 +114,21 @@ dependencies = [
 name = "mesher-basic"
 version = "0.0.1"
 dependencies = [
- "mesher 0.1.0",
+ "mesher 0.8.0",
 ]
 
 [[package]]
 name = "mesher-node"
 version = "0.0.1"
 dependencies = [
- "mesher 0.1.0",
+ "mesher 0.8.0",
 ]
 
 [[package]]
 name = "mesher-social"
 version = "0.0.1"
 dependencies = [
- "mesher 0.1.0",
+ "mesher 0.8.0",
 ]
 
 [[package]]
