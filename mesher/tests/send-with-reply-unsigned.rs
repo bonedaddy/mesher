@@ -1,13 +1,7 @@
-use mesher::debug_transports::InMemory;
 use mesher::prelude::*;
 
-fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
-  let (pk, sk) = encrypt::gen_keypair();
-  let mut m = Mesher::unsigned(vec![sk]);
-  m.add_transport::<InMemory>("inmem").expect("failed to add mock");
-  m.listen_on(&format!("inmem:{}", name)).expect("failed to listen");
-  (m, pk)
-}
+mod common;
+use common::make_unsigned as make_mesher;
 
 #[test]
 fn send_with_reply() {

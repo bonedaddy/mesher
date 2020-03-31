@@ -1,15 +1,7 @@
-use mesher::debug_transports::InMemory;
 use mesher::prelude::*;
 
-fn make_mesher(name: &str) -> (Mesher, encrypt::PublicKey) {
-  let (pk, sk) = encrypt::gen_keypair();
-  let mut mesh = Mesher::unsigned(vec![sk]);
-  mesh
-    .add_transport::<InMemory>("inmem")
-    .expect("Failed to add transport");
-  mesh.listen_on(&format!("inmem:{}", name)).expect("Failed to listen");
-  (mesh, pk)
-}
+mod common;
+use common::make_unsigned as make_mesher;
 
 #[test]
 fn direct() {
