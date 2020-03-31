@@ -111,21 +111,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "mesher_basic"
+name = "mesher-basic"
 version = "0.0.1"
 dependencies = [
  "mesher 0.1.0",
 ]
 
 [[package]]
-name = "mesher_node"
+name = "mesher-node"
 version = "0.0.1"
 dependencies = [
  "mesher 0.1.0",
 ]
 
 [[package]]
-name = "mesher_stego"
+name = "mesher-social"
 version = "0.0.1"
 dependencies = [
  "mesher 0.1.0",

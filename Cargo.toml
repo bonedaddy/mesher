@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "mesher",
-  "mesher_basic",
-  "mesher_stego",
-  "mesher_node",
+  "mesher-basic",
+  "mesher-social",
+  "mesher-node",
 ]

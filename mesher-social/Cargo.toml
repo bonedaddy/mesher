@@ -1,5 +1,5 @@
 [package]
-name = "mesher_node"
+name = "mesher-social"
 version = "0.0.1"
 authors = ["Nic Hartley <nic@cybers.eco>"]
 edition = "2018"
